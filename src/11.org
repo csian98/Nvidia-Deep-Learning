@@ -1,0 +1,224 @@
+#+TITLE: 11.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.16
+
+* LSTM
+#+begin_src python :results output
+
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+import tensorflow as tf
+import logging
+import pickle
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=32
+BATCH_SIZE=256
+INPUT_FILE_NAME="../data/LSTM/frankenstein.txt"
+WINDOW_LENGTH=40
+WINDOW_STEP=3
+BEAM_SIZE=8
+NUM_LETTERS=11
+
+file=open(INPUT_FILE_NAME, 'r', encoding="utf-8-sig")
+text=file.read()
+file.close()
+
+text=text.lower()
+text=text.replace('\n', ' ')
+text=text.replace("  ", ' ')
+unique_chars=list(set(text))
+
+char_to_index=dict((ch, index) for index, ch in enumerate(unique_chars))
+index_to_char=dict((index, ch) for index, ch in enumerate(unique_chars))
+encoding_width=len(char_to_index)
+
+with open("../h5/LSTM/char_to_index.pkl", "wb") as fp:
+    pickle.dump(char_to_index, fp)
+
+with open("../h5/LSTM/index_to_char.pkl", "wb") as fp:
+    pickle.dump(index_to_char, fp)
+
+fragments=[]
+targets=[]
+
+for i in range(0, len(text)-WINDOW_LENGTH, WINDOW_STEP):
+    fragments.append(text[i:i+WINDOW_LENGTH])
+    targets.append(text[i+WINDOW_LENGTH])
+
+X=np.zeros((len(fragments), WINDOW_LENGTH, encoding_width))
+y=np.zeros((len(fragments), encoding_width))
+
+for i, fragment in enumerate(fragments):
+    for j, char in enumerate(fragment):
+        X[i, j, char_to_index[char]]=1
+    y[i, char_to_index[targets[i]]]=1
+
+model=Sequential()
+model.add(LSTM(128, return_sequences=True,
+               dropout=0.2, recurrent_dropout=0.2,
+               input_shape=(None, encoding_width)))
+model.add(LSTM(128,
+               dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(encoding_width, activation="softmax"))
+model.compile(loss="categorical_crossentropy",
+              optimizer="adam")
+model.summary()
+
+history=model.fit(X, y, validation_split=0.05,
+                  batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0,
+                  shuffle=True)
+
+model.save_weights("../h5/LSTM/weights.h5")
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ lstm (LSTM)                 (None, None, 128)         99840     
+                                                                 
+ lstm_1 (LSTM)               (None, 128)               131584    
+                                                                 
+ dense (Dense)               (None, 66)                8514      
+                                                                 
+=================================================================
+Total params: 239938 (937.26 KB)
+Trainable params: 239938 (937.26 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example
+
+
+* Beam Search
+#+begin_src python :results output
+
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+import tensorflow as tf
+import logging
+import pickle
+
+EPOCHS=32
+BATCH_SIZE=256
+INPUT_FILE_NAME="../data/LSTM/frankenstein.txt"
+WINDOW_LENGTH=40
+WINDOW_STEP=3
+BEAM_SIZE=8
+NUM_LETTERS=11
+
+with open("../h5/LSTM/char_to_index.pkl", "rb") as fp:
+    char_to_index=pickle.load(fp)
+
+with open("../h5/LSTM/index_to_char.pkl", "rb") as fp:
+    index_to_char=pickle.load(fp)
+
+encoding_width=len(char_to_index)
+
+model=Sequential()
+model.add(LSTM(128, return_sequences=True,
+               dropout=0.2, recurrent_dropout=0.2,
+               input_shape=(None, encoding_width)))
+model.add(LSTM(128,
+               dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(encoding_width, activation="softmax"))
+model.compile(loss="categorical_crossentropy",
+              optimizer="adam")
+
+model.load_weights("../h5/LSTM/weights.h5")
+
+letters="what is"
+one_hots=[]
+for i, char in enumerate(letters):
+    x=np.zeros(encoding_width)
+    x[char_to_index[char]]=1
+    one_hots.append(x)
+
+beams=[(np.log(1.0), letters, one_hots)]
+
+for i in range(NUM_LETTERS):
+    minibatch_list=[]
+    for triple in beams:
+        minibatch_list.append(triple[2])
+    minibatch=np.array(minibatch_list)
+    y_predict=model.predict(minibatch, verbose=0)
+    new_beams=[]
+    for j, softmax_vec in enumerate(y_predict):
+        triple=beams[j]
+        for k in range(BEAM_SIZE):
+            char_index=np.argmax(softmax_vec)
+            new_prob=triple[0]+np.log(softmax_vec[char_index])
+            new_letters=triple[1]+index_to_char[char_index]
+            x=np.zeros(encoding_width)
+            x[char_index]=1
+            new_one_hots=triple[2].copy()
+            new_one_hots.append(x)
+            new_beams.append((new_prob, new_letters, new_one_hots))
+            softmax_vec[char_index]=0
+    new_beams.sort(key=lambda tup: tup[0], reverse=True)
+    beams=new_beams[0:BEAM_SIZE]
+
+for item in beams:
+    print(item[1])
+
+#+end_src
+
+#+RESULTS:
+: what is which the 
+: what is which whic
+: what is which and 
+: what is were that 
+: what is which i ha
+: what is which i wa
+: what is were the s
+: what is were the m
+
+* Bidirectional RNN
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Input, Dense, LSTM
+from tensorflow.keras.layers import Bidirectional
+
+model = Sequential([
+    Input(shape=(5, 10)),
+    Bidirectional(LSTM(10, return_sequences=True)),
+    Bidirectional(LSTM(10)),
+    Dense(5, activation="softmax"),
+])
+model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+
+model.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ bidirectional (Bidirection  (None, 5, 20)             1680      
+ al)                                                             
+                                                                 
+ bidirectional_1 (Bidirecti  (None, 20)                2480      
+ onal)                                                           
+                                                                 
+ dense (Dense)               (None, 5)                 105       
+                                                                 
+=================================================================
+Total params: 4265 (16.66 KB)
+Trainable params: 4265 (16.66 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example

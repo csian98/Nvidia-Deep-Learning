@@ -1,0 +1,211 @@
+#+TITLE: 09.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.12
+
+* RNN (Recurrent Neural Network)
+#+begin_src python :results output
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import SimpleRNN
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=100
+BATCH_SIZE=16
+TRAIN_TEST_SPLIT=0.8
+
+MIN=12
+FILE_NAME="../data/RNN/book_story_sales.csv"
+
+def readfile(file_name):
+    file=open(file_name, 'r', encoding="utf-8")
+    data=[]
+    for line in file:
+        try:
+            values=line.split(',')
+            data.append(float(values[1]))
+        except:
+            continue
+    file.close()
+    return np.array(data, dtype=np.float32)
+    
+
+sales=readfile(FILE_NAME)
+months=len(sales)
+split=int(months*TRAIN_TEST_SPLIT)
+train_sales=sales[:split]
+test_sales=sales[split:]
+
+x=range(len(sales))
+plt.plot(x, sales, "r-", label="book sales")
+plt.title("Book Sales")
+plt.axis([0, 339, 0.0, 3000.0])
+plt.xlabel("Month")
+plt.ylabel("Sales (Million Dollars)")
+plt.legend()
+plt.show()
+
+test_output=test_sales[MIN:]
+naive_prediction=test_sales[MIN-1:-1]
+x=range(len(test_output))
+plt.plot(x, test_output, "g-", label="test_output")
+plt.plot(x, naive_prediction, "m-", label="Naive Prediction")
+plt.title("Book Sales")
+plt.axis([0, len(test_output), 0.0, 3000.0])
+plt.xlabel("Month")
+plt.ylabel("Sales")
+plt.legend()
+plt.show()
+
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results output
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import SimpleRNN
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=100
+BATCH_SIZE=16
+TRAIN_TEST_SPLIT=0.8
+
+MIN=12
+FILE_NAME="../data/RNN/book_story_sales.csv"
+
+def readfile(file_name):
+    file=open(file_name, 'r', encoding="utf-8")
+    data=[]
+    for line in file:
+        try:
+            values=line.split(',')
+            data.append(float(values[1]))
+        except:
+            continue
+    file.close()
+    return np.array(data, dtype=np.float32)
+    
+
+sales=readfile(FILE_NAME)
+months=len(sales)
+split=int(months*TRAIN_TEST_SPLIT)
+train_sales=sales[:split]
+test_sales=sales[split:]
+
+mean=np.mean(train_sales)
+stddev=np.std(train_sales)
+
+train_sales_std=(train_sales-mean)/stddev
+test_sales_std=(test_sales-mean)/stddev
+
+train_months=len(train_sales)
+train_X=np.zeros((train_months-MIN, train_months-1, 1))
+train_y=np.zeros((train_months-MIN, 1))
+for i in range(0, train_months-MIN):
+    train_X[i, -(i+MIN):, 0]=train_sales_std[0:i+MIN]
+    train_y[i, 0]=train_sales_std[i+MIN]
+
+test_months=len(test_sales)
+test_X=np.zeros((test_months-MIN, test_months-1, 1))
+test_y=np.zeros((test_months-MIN, 1))
+for i in range(0, test_months-MIN):
+    test_X[i, -(i+MIN):, 0]=test_sales_std[0:i+MIN]
+    test_y[i, 0]=test_sales_std[i+MIN]
+
+model=Sequential()
+model.add(SimpleRNN(128, activation="relu", input_shape=(None, 1)))
+model.add(Dense(1, activation="linear"))
+model.compile(loss="mean_squared_error", optimizer="adam",
+              metrics=["mean_absolute_error"])
+
+model.summary()
+model.fit(train_X, train_y, validation_data=(test_X, test_y),
+          epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=0, shuffle=True)
+
+predicted_test=model.predict(test_X, len(test_X))
+predicted_test=np.reshape(predicted_test, (len(predicted_test)))
+predicted_test=predicted_test*stddev+mean
+
+x=range(len(test_sales)-MIN)
+plt.plot(x, predicted_test, "m-", label="predicted test_output")
+plt.plot(x, test_sales[-(len(test_sales)-MIN):], "g-", label="real test_output")
+plt.title("Book Sales")
+plt.axis([0, 55, 0.0, 3000.0])
+plt.xlabel("Month")
+plt.ylabel("Predicted Sales")
+plt.legend()
+plt.show()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ simple_rnn (SimpleRNN)      (None, 128)               16640     
+                                                                 
+ dense (Dense)               (None, 1)                 129       
+                                                                 
+=================================================================
+Total params: 16769 (65.50 KB)
+Trainable params: 16769 (65.50 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+1/1 [==============================] - ETA: 0s 1/1 [==============================] - 0s 65ms/step
+#+end_example
+
+- return_sequences
+- recurrent_dropout
+
+#+begin_src python :results output
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense
+
+model=Sequential()
+model.add(SimpleRNN(32, activation="relu", input_shape=(None, 1), return_sequences=True, recurrent_dropout=0.2))
+model.add(SimpleRNN(16, activation="relu", return_sequences=True, recurrent_dropout=0.2))
+model.add(SimpleRNN(8, activation="relu", recurrent_dropout=0.2))
+model.add(Dense(16, activation="sigmoid"))
+model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+model.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ simple_rnn (SimpleRNN)      (None, None, 32)          1088      
+                                                                 
+ simple_rnn_1 (SimpleRNN)    (None, None, 16)          784       
+                                                                 
+ simple_rnn_2 (SimpleRNN)    (None, 8)                 200       
+                                                                 
+ dense (Dense)               (None, 16)                144       
+                                                                 
+=================================================================
+Total params: 2216 (8.66 KB)
+Trainable params: 2216 (8.66 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example

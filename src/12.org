@@ -1,0 +1,293 @@
+#+TITLE: 12.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.17
+
+* Neural Network Language Model (NNLM)
+- n-gram model
+- skip-gram model
+- NNLM
+
+* Embedding
+** Training Model
+#+begin_src python :results output
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Embedding
+from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
+import logging
+import pickle
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=32
+BATCH_SIZE=256
+INPUT_FILE_NAME="../data/LSTM/frankenstein.txt"
+WINDOW_LENGTH=40
+WINDOW_STEP=3
+PREDICT_LENGTH=3
+MAX_WORDS=7500
+EMBEDDING_WIDTH=100
+
+file=open(INPUT_FILE_NAME, 'r', encoding="utf-8-sig")
+text=file.read()
+file.close()
+
+text=text_to_word_sequence(text)
+fragments=[]
+targets=[]
+
+for i in range(0, len(text)-WINDOW_LENGTH, WINDOW_STEP):
+    fragments.append(text[i:i+WINDOW_LENGTH])
+    targets.append(text[i+WINDOW_LENGTH])
+
+tokenizer=Tokenizer(num_words=MAX_WORDS, oov_token="UNK")
+tokenizer.fit_on_texts(text)
+fragments_indexed=tokenizer.texts_to_sequences(fragments)
+targets_indexed=tokenizer.texts_to_sequences(targets)
+
+X=np.array(fragments_indexed, dtype=np.int64)
+y=np.zeros((len(targets_indexed), MAX_WORDS))
+for i, target_index in enumerate(targets_indexed):
+    y[i, target_index]=1
+
+# Model
+training_model=Sequential()
+training_model.add(Embedding(
+    output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS,
+    mask_zero=True, input_length=None
+))
+training_model.add(LSTM(
+    128, return_sequences=True,
+    dropout=0.2, recurrent_dropout=0.2
+))
+training_model.add(LSTM(
+    128,
+    dropout=0.2, recurrent_dropout=0.2
+))
+training_model.add(Dense(128, activation="relu"))
+training_model.add(Dense(MAX_WORDS, activation="softmax"))
+
+training_model.compile(loss="categorical_crossentropy", optimizer="adam")
+training_model.summary()
+
+training_model.fit(X, y,
+                   validation_split=0.05,
+                   batch_size=BATCH_SIZE, epochs=EPOCHS,
+                   verbose=1, shuffle=True)
+
+#weights=training_model.get_weights()
+#infernece_model.set_weights(weights)
+
+with open("../h5/Embedded/tokenizer.pkl", "wb") as fp:
+    pickle.dump(tokenizer, fp)
+
+training_model.save_weights("../h5/Embedded/weights.h5")
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ embedding (Embedding)       (None, None, 100)         750000    
+                                                                 
+ lstm (LSTM)                 (None, None, 128)         117248    
+                                                                 
+ lstm_1 (LSTM)               (None, 128)               131584    
+                                                                 
+ dense (Dense)               (None, 128)               16512     
+                                                                 
+ dense_1 (Dense)             (None, 7500)              967500    
+                                                                 
+=================================================================
+Total params: 1982844 (7.56 MB)
+Trainable params: 1982844 (7.56 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example
+
+** Inference Model
+#+begin_src python :results output
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Embedding
+from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
+import logging
+import pickle
+
+tf.get_logger().setLevel(logging.ERROR)
+
+PREDICT_LENGTH=3
+MAX_WORDS=7500
+EMBEDDING_WIDTH=100
+
+inference_model=Sequential()
+inference_model.add(Embedding(
+    output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS,
+    mask_zero=False,
+    batch_input_shape=(1, 1)
+))
+inference_model.add(LSTM(
+    128, return_sequences=True,
+    dropout=0.2,
+    recurrent_dropout=0.2,
+    stateful=True
+))
+inference_model.add(LSTM(
+    128,
+    dropout=0.2,
+    recurrent_dropout=0.2,
+    stateful=True
+))
+inference_model.add(Dense(128, activation="relu"))
+inference_model.add(Dense(MAX_WORDS, activation="softmax"))
+
+inference_model.compile(loss="categorical_crossentropy", optimizer="adam")
+inference_model.summary()
+
+inference_model.load_weights("../h5/Embedded/weights.h5")
+
+with open("../h5/Embedded/tokenizer.pkl", "rb") as fp:
+    tokenizer=pickle.load(fp)
+
+# predict
+first_words=["i", "saw"]
+first_words_indexed=tokenizer.texts_to_sequences(first_words)
+inference_model.reset_states()
+predicted_string=""
+
+for i, word_index in enumerate(first_words_indexed):
+    x=np.zeros((1, 1), dtype=np.int64)
+    x[0][0]=word_index[0]
+    predicted_string+=first_words[i]
+    predicted_string+=" "
+    y_predict=inference_model.predict(x, verbose=0)[0]
+
+for i in range(PREDICT_LENGTH):
+    new_word_index=np.argmax(y_predict)
+    word=tokenizer.sequences_to_texts([[new_word_index]])
+    x[0][0]=new_word_index
+    predicted_string+=word[0]
+    predicted_string+=" "
+    y_predict=inference_model.predict(x, verbose=0)[0]
+
+print(predicted_string, end="\n\n")
+
+# Embedding
+embeddings=inference_model.layers[0].get_weights()[0]
+
+lookup_words=["the", "saw", "see", "of", "and", "monster", "frankenstein",
+              "read", "eat"]
+
+for lookup_word in lookup_words:
+    lookup_word_indexed=tokenizer.texts_to_sequences([lookup_word])
+    print("word close to: ", lookup_word)
+    lookup_embedding=embeddings[lookup_word_indexed[0]]
+    word_indices={}
+    for i, embedding in enumerate(embeddings):
+        distance=np.linalg.norm(embedding-lookup_embedding)
+        word_indices[distance]=i
+
+    for distance in sorted(word_indices.keys())[:5]:
+        word_index=word_indices[distance]
+        word=tokenizer.sequences_to_texts([[word_index]])[0]
+        print(word+": ",distance)
+    print('')
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ embedding (Embedding)       (1, 1, 100)               750000    
+                                                                 
+ lstm (LSTM)                 (1, 1, 128)               117248    
+                                                                 
+ lstm_1 (LSTM)               (1, 128)                  131584    
+                                                                 
+ dense (Dense)               (1, 128)                  16512     
+                                                                 
+ dense_1 (Dense)             (1, 7500)                 967500    
+                                                                 
+=================================================================
+Total params: 1982844 (7.56 MB)
+Trainable params: 1982844 (7.56 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+i saw the greatest continued 
+
+word close to:  the
+the:  0.0
+a:  1.8894397
+“the:  2.0337572
+unperceived:  2.2136633
+reproach:  2.3437736
+
+word close to:  saw
+saw:  0.0
+fortunately:  0.4986598
+dismay:  0.49942446
+for:  0.5195357
+bought:  0.5291886
+
+word close to:  see
+see:  0.0
+for:  0.50935024
+in:  0.51144487
+if:  0.52279353
+“find:  0.5291366
+
+word close to:  of
+of:  0.0
+in:  0.28994846
+by:  0.36536577
+with:  0.36568585
+all:  0.37359115
+
+word close to:  and
+and:  0.0
+wonderful:  0.34534106
+not:  0.3536109
+am:  0.3599276
+is:  0.36329055
+
+word close to:  monster
+monster:  0.0
+widest:  0.45848116
+distribute:  0.46704167
+files:  0.47060493
+wouldst:  0.4780777
+
+word close to:  frankenstein
+frankenstein:  0.0
+limb:  0.45507953
+disclaimer:  0.490392
+f:  0.49529475
+govern:  0.49672964
+
+word close to:  read
+read:  0.0
+composure:  0.51240706
+places:  0.5439308
+creatures:  0.5487069
+continued:  0.55455303
+
+word close to:  eat
+eat:  0.0
+openly:  0.50578403
+includes:  0.5096829
+navigators—there:  0.51712966
+youthful:  0.51900035
+
+#+end_example

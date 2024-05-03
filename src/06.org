@@ -1,0 +1,95 @@
+#+TITLE: 06.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.06
+
+* Regression Model
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+import numpy as np
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=500
+BATCH_SIZE=16
+
+boston_housing=keras.datasets.boston_housing
+(raw_x_train, y_train), (raw_x_test, y_test)=boston_housing.load_data()
+
+x_mean=np.mean(raw_x_train, axis=0)
+x_stddev=np.std(raw_x_train, axis=0)
+x_train=(raw_x_train-x_mean)/x_stddev
+x_test=(raw_x_test-x_mean)/x_stddev
+
+model=Sequential()
+model.add(Dense(64, activation="relu", input_shape=[13]))
+model.add(Dense(64, activation="relu"))
+model.add(Dense(1, activation="linear"))
+
+model.compile(loss="mean_squared_error", optimizer="adam",
+              metrics=["mean_absolute_error"])
+
+model.summary()
+
+history=model.fit(x_train, y_train, validation_data=(x_test, y_test),
+                  epochs=EPOCHS, batch_size=BATCH_SIZE,
+                  verbose=0, shuffle=True)
+
+predictions=model.predict(x_test)
+for i in range(0, 4):
+    print("Prediction: ", predictions[i], ", true value: ", y_test[i])
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ dense (Dense)               (None, 64)                896       
+                                                                 
+ dense_1 (Dense)             (None, 64)                4160      
+                                                                 
+ dense_2 (Dense)             (None, 1)                 65        
+                                                                 
+=================================================================
+Total params: 5121 (20.00 KB)
+Trainable params: 5121 (20.00 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+1/4 [======>.......................] - ETA: 0s 4/4 [==============================] - 0s 311us/step
+Prediction:  [8.731747] , true value:  7.2
+Prediction:  [19.29222] , true value:  18.8
+Prediction:  [20.480932] , true value:  19.0
+Prediction:  [29.805223] , true value:  27.0
+#+end_example
+
+* Regularization Techniques
+#+begin_src python
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.regularizaers import l2
+
+model=Sequential()
+model.add(Dense(64, activation="relu",
+                kernel_regularizer=l2(0.1),
+                bias_regularizer=l2(0.1), ## commonly donot use bias regularizer
+                input_shape=[13]))
+model.add(Dropout(0.2))
+model.add(Dense(64, activation="relu",
+                kernel_regularizer=l2(0.1),
+                bias_regularizer=l2(0.1)))
+mode.add(Dropout(0.2))
+model.add(Dense(1, activation="linear",
+                kernel_regularizer=l2(0.1),
+                bias_regularizer=l2(0.1)))
+
+#+end_src

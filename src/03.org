@@ -1,0 +1,2610 @@
+#+TITLE: 03.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.01
+
+* Sigmoid Neuron and Backpropagation
+
+#+begin_src python :results output
+
+import numpy as np
+
+def neuron_w(input_count):
+    weights=np.zeros(input_count+1)
+    for i in range(1, (input_count+1)):
+        weights[i]=np.random.uniform(-1.0, 1.0)
+    return weights
+
+def show_learning():
+    print("Current weights: ")
+    for i, w in enumerate(n_w):
+        print("neuron ", i, ": w0 = ", "%5.2f"%w[0], ", w1 = ", "%5.2f"%w[1], ", w2 = ", "%5.2f"%w[2])
+    print("==========")
+
+def forward_pass(x):
+    global n_y
+    n_y[0]=np.tanh(np.dot(n_w[0], x))
+    n_y[1]=np.tanh(np.dot(n_w[1], x))
+    n2_inputs=np.array([1.0, n_y[0], n_y[1]])
+    z2=np.dot(n_w[2], n2_inputs)
+    n_y[2]=1.0/(1.0+np.exp(-z2))
+
+def backward_pass(y_truth):
+    global n_error
+    error_prime=-(y_truth-n_y[2])
+    derivative=n_y[2]*(1.0-n_y[2])
+    n_error[2]=error_prime*derivative
+    derivative=1.0-n_y[0]**2
+    n_error[0]=n_w[2][1]*n_error[2]*derivative
+    derivative=1.0-n_y[1]**2
+    n_error[1]=n_w[2][2]*n_error[2]*derivative
+
+def adjust_weights(x):
+    global n_w
+    n_w[0]-=(x*LEARNING_RATE*n_error[0])
+    n_w[1]-=(x*LEARNING_RATE*n_error[1])
+    n2_inputs=np.array([1.0, n_y[0], n_y[1]])
+    n_w[2]-=(n2_inputs*LEARNING_RATE*n_error[2])
+
+if __name__ == "__main__":
+    np.random.seed(2024)
+    LEARNING_RATE=0.1
+    index_list=[0, 1, 2, 3]
+    
+    x_train=[np.array([1.0, -1.0, -1.0]),
+             np.array([1.0, -1.0, 1.0]),
+             np.array([1.0, 1.0, -1.0]),
+             np.array([1.0, 1.0, 1.0])]
+    
+    # XOR
+    y_train=[0.0, 1.0, 1.0, 0.0]
+    
+    
+    n_w=[neuron_w(2), neuron_w(2), neuron_w(2)]
+    n_y=[0, 0, 0]
+    n_error=[0, 0, 0]
+    
+    
+    # Training
+    all_correct=False
+    while not all_correct:
+        all_correct=True
+        np.random.shuffle(index_list)
+        for i in index_list:
+            forward_pass(x_train[i])
+            backward_pass(y_train[i])
+            adjust_weights(x_train[i])
+            show_learning()
+        for i in range(len(x_train)):
+            forward_pass(x_train[i])
+            print("x1 = ", "%4.1f"%x_train[i][1], ", x2 = ", "%4.1f"%x_train[i][2],
+                  "y = ", "%.4f"%n_y[2])
+            if(((y_train[i] < 0.5) and (n_y[2] >= 0.5)) or
+               ((y_train[i] >= 0.5) and (n_y[2] < 0.5))):
+                all_correct=False
+           
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.18 , w2 =   0.39
+neuron  1 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.92
+neuron  2 : w0 =   0.01 , w1 =  -0.59 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.00 , w1 =   0.18 , w2 =   0.39
+neuron  1 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.92
+neuron  2 : w0 =   0.00 , w1 =  -0.58 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.17 , w2 =   0.39
+neuron  1 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.02 , w1 =  -0.59 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.00 , w1 =   0.18 , w2 =   0.40
+neuron  1 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.91
+neuron  2 : w0 =   0.00 , w1 =  -0.59 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4013
+x1 =  -1.0 , x2 =   1.0 y =  0.5255
+x1 =   1.0 , x2 =  -1.0 y =  0.4814
+x1 =   1.0 , x2 =   1.0 y =  0.6008
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.17 , w2 =   0.41
+neuron  1 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.00 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.60 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.00 , w1 =   0.17 , w2 =   0.41
+neuron  1 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.18 , w2 =   0.40
+neuron  1 : w0 =  -0.03 , w1 =  -0.62 , w2 =  -0.91
+neuron  2 : w0 =   0.00 , w1 =  -0.59 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4041
+x1 =  -1.0 , x2 =   1.0 y =  0.5279
+x1 =   1.0 , x2 =  -1.0 y =  0.4856
+x1 =   1.0 , x2 =   1.0 y =  0.6001
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.17 , w2 =   0.41
+neuron  1 : w0 =  -0.04 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.40
+neuron  1 : w0 =  -0.05 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.03 , w1 =  -0.59 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.17 , w2 =   0.40
+neuron  1 : w0 =  -0.05 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.02 , w1 =  -0.59 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.04 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4066
+x1 =  -1.0 , x2 =   1.0 y =  0.5300
+x1 =   1.0 , x2 =  -1.0 y =  0.4897
+x1 =   1.0 , x2 =   1.0 y =  0.5993
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.19 , w2 =   0.40
+neuron  1 : w0 =  -0.05 , w1 =  -0.62 , w2 =  -0.92
+neuron  2 : w0 =   0.01 , w1 =  -0.59 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.06 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.03 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.40
+neuron  1 : w0 =  -0.06 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.02 , w1 =  -0.59 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.06 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4089
+x1 =  -1.0 , x2 =   1.0 y =  0.5319
+x1 =   1.0 , x2 =  -1.0 y =  0.4937
+x1 =   1.0 , x2 =   1.0 y =  0.5984
+Current weights: 
+neuron  0 : w0 =  -0.01 , w1 =   0.18 , w2 =   0.40
+neuron  1 : w0 =  -0.06 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =  -0.01 , w1 =  -0.59 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.17 , w2 =   0.41
+neuron  1 : w0 =  -0.07 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.07 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.02 , w1 =  -0.59 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.07 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4114
+x1 =  -1.0 , x2 =   1.0 y =  0.5339
+x1 =   1.0 , x2 =  -1.0 y =  0.4978
+x1 =   1.0 , x2 =   1.0 y =  0.5976
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.18 , w2 =   0.42
+neuron  1 : w0 =  -0.08 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.60 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.17 , w2 =   0.41
+neuron  1 : w0 =  -0.08 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.09 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.02 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.19 , w2 =   0.41
+neuron  1 : w0 =  -0.09 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.00 , w1 =  -0.60 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4135
+x1 =  -1.0 , x2 =   1.0 y =  0.5357
+x1 =   1.0 , x2 =  -1.0 y =  0.5016
+x1 =   1.0 , x2 =   1.0 y =  0.5969
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.41
+neuron  1 : w0 =  -0.10 , w1 =  -0.62 , w2 =  -0.91
+neuron  2 : w0 =   0.01 , w1 =  -0.60 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.41
+neuron  1 : w0 =  -0.10 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.03 , w1 =  -0.60 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.18 , w2 =   0.41
+neuron  1 : w0 =  -0.10 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.02 , w1 =  -0.60 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.10 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.00 , w1 =  -0.61 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4155
+x1 =  -1.0 , x2 =   1.0 y =  0.5373
+x1 =   1.0 , x2 =  -1.0 y =  0.5053
+x1 =   1.0 , x2 =   1.0 y =  0.5960
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.18 , w2 =   0.42
+neuron  1 : w0 =  -0.11 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =   0.01 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.02 , w1 =   0.19 , w2 =   0.43
+neuron  1 : w0 =  -0.11 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =  -0.00 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.12 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.61 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.11 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.61 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4173
+x1 =  -1.0 , x2 =   1.0 y =  0.5390
+x1 =   1.0 , x2 =  -1.0 y =  0.5089
+x1 =   1.0 , x2 =   1.0 y =  0.5954
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.20 , w2 =   0.41
+neuron  1 : w0 =  -0.12 , w1 =  -0.62 , w2 =  -0.91
+neuron  2 : w0 =   0.01 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.13 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.02 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.13 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.13 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.61 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4190
+x1 =  -1.0 , x2 =   1.0 y =  0.5405
+x1 =   1.0 , x2 =  -1.0 y =  0.5124
+x1 =   1.0 , x2 =   1.0 y =  0.5946
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.41
+neuron  1 : w0 =  -0.14 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.01 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.14 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.02 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.14 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =   0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.42
+neuron  1 : w0 =  -0.14 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.61 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4206
+x1 =  -1.0 , x2 =   1.0 y =  0.5418
+x1 =   1.0 , x2 =  -1.0 y =  0.5159
+x1 =   1.0 , x2 =   1.0 y =  0.5938
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.42
+neuron  1 : w0 =  -0.15 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =   0.01 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.21 , w2 =   0.42
+neuron  1 : w0 =  -0.15 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.20 , w2 =   0.42
+neuron  1 : w0 =  -0.15 , w1 =  -0.63 , w2 =  -0.91
+neuron  2 : w0 =  -0.02 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.15 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.61 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4222
+x1 =  -1.0 , x2 =   1.0 y =  0.5432
+x1 =   1.0 , x2 =  -1.0 y =  0.5195
+x1 =   1.0 , x2 =   1.0 y =  0.5931
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.15 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.43
+neuron  1 : w0 =  -0.16 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.20 , w2 =   0.42
+neuron  1 : w0 =  -0.16 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.02 , w1 =  -0.61 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.17 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.62 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4238
+x1 =  -1.0 , x2 =   1.0 y =  0.5447
+x1 =   1.0 , x2 =  -1.0 y =  0.5231
+x1 =   1.0 , x2 =   1.0 y =  0.5926
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.19 , w2 =   0.44
+neuron  1 : w0 =  -0.18 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =   0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.44
+neuron  1 : w0 =  -0.18 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.03 , w1 =   0.19 , w2 =   0.44
+neuron  1 : w0 =  -0.17 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.18 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4251
+x1 =  -1.0 , x2 =   1.0 y =  0.5461
+x1 =   1.0 , x2 =  -1.0 y =  0.5263
+x1 =   1.0 , x2 =   1.0 y =  0.5919
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.18 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.43
+neuron  1 : w0 =  -0.19 , w1 =  -0.63 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.20 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =   0.00 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.19 , w1 =  -0.64 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4263
+x1 =  -1.0 , x2 =   1.0 y =  0.5475
+x1 =   1.0 , x2 =  -1.0 y =  0.5295
+x1 =   1.0 , x2 =   1.0 y =  0.5914
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.19 , w1 =  -0.65 , w2 =  -0.90
+neuron  2 : w0 =  -0.02 , w1 =  -0.61 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.20 , w2 =   0.42
+neuron  1 : w0 =  -0.20 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.61 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.21 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =   0.01 , w1 =  -0.62 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.20 , w2 =   0.44
+neuron  1 : w0 =  -0.21 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.62 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4276
+x1 =  -1.0 , x2 =   1.0 y =  0.5487
+x1 =   1.0 , x2 =  -1.0 y =  0.5328
+x1 =   1.0 , x2 =   1.0 y =  0.5907
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.20 , w2 =   0.43
+neuron  1 : w0 =  -0.20 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.21 , w2 =   0.42
+neuron  1 : w0 =  -0.21 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.61 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.43
+neuron  1 : w0 =  -0.21 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.22 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4288
+x1 =  -1.0 , x2 =   1.0 y =  0.5499
+x1 =   1.0 , x2 =  -1.0 y =  0.5361
+x1 =   1.0 , x2 =   1.0 y =  0.5900
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.22 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.03 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.23 , w1 =  -0.64 , w2 =  -0.90
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.23 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.00 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.23 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4297
+x1 =  -1.0 , x2 =   1.0 y =  0.5511
+x1 =   1.0 , x2 =  -1.0 y =  0.5391
+x1 =   1.0 , x2 =   1.0 y =  0.5895
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.20 , w2 =   0.44
+neuron  1 : w0 =  -0.23 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.04 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.23 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.04 , w1 =  -0.63 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.24 , w1 =  -0.65 , w2 =  -0.90
+neuron  2 : w0 =  -0.03 , w1 =  -0.63 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.24 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4308
+x1 =  -1.0 , x2 =   1.0 y =  0.5524
+x1 =   1.0 , x2 =  -1.0 y =  0.5423
+x1 =   1.0 , x2 =   1.0 y =  0.5891
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.25 , w1 =  -0.65 , w2 =  -0.90
+neuron  2 : w0 =  -0.00 , w1 =  -0.63 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.25 , w1 =  -0.65 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.05 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.25 , w1 =  -0.65 , w2 =  -0.90
+neuron  2 : w0 =  -0.03 , w1 =  -0.63 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.26 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4316
+x1 =  -1.0 , x2 =   1.0 y =  0.5534
+x1 =   1.0 , x2 =  -1.0 y =  0.5453
+x1 =   1.0 , x2 =   1.0 y =  0.5884
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.21 , w2 =   0.45
+neuron  1 : w0 =  -0.26 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.27 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =   0.01 , w1 =  -0.63 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.27 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.21 , w2 =   0.45
+neuron  1 : w0 =  -0.27 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.63 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4322
+x1 =  -1.0 , x2 =   1.0 y =  0.5544
+x1 =   1.0 , x2 =  -1.0 y =  0.5479
+x1 =   1.0 , x2 =   1.0 y =  0.5877
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.27 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.03 , w1 =  -0.63 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.44
+neuron  1 : w0 =  -0.27 , w1 =  -0.66 , w2 =  -0.90
+neuron  2 : w0 =  -0.02 , w1 =  -0.62 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.21 , w2 =   0.44
+neuron  1 : w0 =  -0.28 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.01 , w1 =  -0.63 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.45
+neuron  1 : w0 =  -0.28 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.64 , w2 =  -0.75
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4329
+x1 =  -1.0 , x2 =   1.0 y =  0.5554
+x1 =   1.0 , x2 =  -1.0 y =  0.5507
+x1 =   1.0 , x2 =   1.0 y =  0.5870
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.46
+neuron  1 : w0 =  -0.28 , w1 =  -0.66 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.64 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.23 , w2 =   0.45
+neuron  1 : w0 =  -0.29 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.03 , w1 =  -0.64 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.23 , w2 =   0.44
+neuron  1 : w0 =  -0.28 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.04 , w1 =  -0.63 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.22 , w2 =   0.45
+neuron  1 : w0 =  -0.29 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.03 , w1 =  -0.64 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4336
+x1 =  -1.0 , x2 =   1.0 y =  0.5566
+x1 =   1.0 , x2 =  -1.0 y =  0.5536
+x1 =   1.0 , x2 =   1.0 y =  0.5865
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.21 , w2 =   0.46
+neuron  1 : w0 =  -0.30 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.01 , w1 =  -0.64 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.22 , w2 =   0.46
+neuron  1 : w0 =  -0.30 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.65 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.22 , w2 =   0.46
+neuron  1 : w0 =  -0.30 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.64 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.22 , w2 =   0.45
+neuron  1 : w0 =  -0.30 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.64 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4340
+x1 =  -1.0 , x2 =   1.0 y =  0.5577
+x1 =   1.0 , x2 =  -1.0 y =  0.5561
+x1 =   1.0 , x2 =   1.0 y =  0.5859
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.30 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.74
+==========
+Current weights: 
+neuron  0 : w0 =  -0.06 , w1 =   0.23 , w2 =   0.45
+neuron  1 : w0 =  -0.30 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.05 , w1 =  -0.64 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.23 , w2 =   0.45
+neuron  1 : w0 =  -0.31 , w1 =  -0.66 , w2 =  -0.89
+neuron  2 : w0 =  -0.04 , w1 =  -0.64 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.23 , w2 =   0.45
+neuron  1 : w0 =  -0.32 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.64 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4346
+x1 =  -1.0 , x2 =   1.0 y =  0.5589
+x1 =   1.0 , x2 =  -1.0 y =  0.5589
+x1 =   1.0 , x2 =   1.0 y =  0.5855
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.45
+neuron  1 : w0 =  -0.32 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.64 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.24 , w2 =   0.45
+neuron  1 : w0 =  -0.32 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.03 , w1 =  -0.65 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.33 , w1 =  -0.67 , w2 =  -0.88
+neuron  2 : w0 =  -0.02 , w1 =  -0.65 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.33 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.64 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4348
+x1 =  -1.0 , x2 =   1.0 y =  0.5598
+x1 =   1.0 , x2 =  -1.0 y =  0.5613
+x1 =   1.0 , x2 =   1.0 y =  0.5849
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.24 , w2 =   0.45
+neuron  1 : w0 =  -0.33 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.02 , w1 =  -0.64 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.34 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.01 , w1 =  -0.65 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.22 , w2 =   0.45
+neuron  1 : w0 =  -0.34 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.02 , w1 =  -0.64 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.34 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4350
+x1 =  -1.0 , x2 =   1.0 y =  0.5607
+x1 =   1.0 , x2 =  -1.0 y =  0.5636
+x1 =   1.0 , x2 =   1.0 y =  0.5841
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.24 , w2 =   0.47
+neuron  1 : w0 =  -0.34 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.65 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.07 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.33 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.65 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.24 , w2 =   0.45
+neuron  1 : w0 =  -0.34 , w1 =  -0.67 , w2 =  -0.89
+neuron  2 : w0 =  -0.05 , w1 =  -0.64 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.35 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.76
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4354
+x1 =  -1.0 , x2 =   1.0 y =  0.5619
+x1 =   1.0 , x2 =  -1.0 y =  0.5662
+x1 =   1.0 , x2 =   1.0 y =  0.5837
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.24 , w2 =   0.47
+neuron  1 : w0 =  -0.35 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.66 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.47
+neuron  1 : w0 =  -0.36 , w1 =  -0.69 , w2 =  -0.87
+neuron  2 : w0 =  -0.04 , w1 =  -0.66 , w2 =  -0.75
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.24 , w2 =   0.47
+neuron  1 : w0 =  -0.36 , w1 =  -0.68 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.66 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.36 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4355
+x1 =  -1.0 , x2 =   1.0 y =  0.5630
+x1 =   1.0 , x2 =  -1.0 y =  0.5685
+x1 =   1.0 , x2 =   1.0 y =  0.5832
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.23 , w2 =   0.47
+neuron  1 : w0 =  -0.37 , w1 =  -0.69 , w2 =  -0.87
+neuron  2 : w0 =  -0.03 , w1 =  -0.65 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.23 , w2 =   0.46
+neuron  1 : w0 =  -0.37 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.23 , w2 =   0.47
+neuron  1 : w0 =  -0.36 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.65 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.37 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.65 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4356
+x1 =  -1.0 , x2 =   1.0 y =  0.5641
+x1 =   1.0 , x2 =  -1.0 y =  0.5706
+x1 =   1.0 , x2 =   1.0 y =  0.5827
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.25 , w2 =   0.46
+neuron  1 : w0 =  -0.38 , w1 =  -0.68 , w2 =  -0.89
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.38 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.03 , w1 =  -0.65 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.38 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.24 , w2 =   0.47
+neuron  1 : w0 =  -0.38 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.65 , w2 =  -0.77
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4355
+x1 =  -1.0 , x2 =   1.0 y =  0.5650
+x1 =   1.0 , x2 =  -1.0 y =  0.5727
+x1 =   1.0 , x2 =   1.0 y =  0.5819
+Current weights: 
+neuron  0 : w0 =  -0.08 , w1 =   0.25 , w2 =   0.47
+neuron  1 : w0 =  -0.38 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.66 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.24 , w2 =   0.48
+neuron  1 : w0 =  -0.39 , w1 =  -0.70 , w2 =  -0.87
+neuron  2 : w0 =  -0.05 , w1 =  -0.66 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.25 , w2 =   0.47
+neuron  1 : w0 =  -0.39 , w1 =  -0.69 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.66 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.25 , w2 =   0.47
+neuron  1 : w0 =  -0.39 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.66 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4355
+x1 =  -1.0 , x2 =   1.0 y =  0.5661
+x1 =   1.0 , x2 =  -1.0 y =  0.5748
+x1 =   1.0 , x2 =   1.0 y =  0.5815
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.39 , w1 =  -0.70 , w2 =  -0.89
+neuron  2 : w0 =  -0.07 , w1 =  -0.65 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.25 , w2 =   0.46
+neuron  1 : w0 =  -0.40 , w1 =  -0.69 , w2 =  -0.89
+neuron  2 : w0 =  -0.05 , w1 =  -0.65 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.24 , w2 =   0.46
+neuron  1 : w0 =  -0.40 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.04 , w1 =  -0.65 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.25 , w2 =   0.47
+neuron  1 : w0 =  -0.40 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.66 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4355
+x1 =  -1.0 , x2 =   1.0 y =  0.5670
+x1 =   1.0 , x2 =  -1.0 y =  0.5770
+x1 =   1.0 , x2 =   1.0 y =  0.5808
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.40 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.67 , w2 =  -0.76
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.41 , w1 =  -0.69 , w2 =  -0.89
+neuron  2 : w0 =  -0.06 , w1 =  -0.66 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.42 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.67 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.25 , w2 =   0.47
+neuron  1 : w0 =  -0.41 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.66 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4353
+x1 =  -1.0 , x2 =   1.0 y =  0.5681
+x1 =   1.0 , x2 =  -1.0 y =  0.5791
+x1 =   1.0 , x2 =   1.0 y =  0.5803
+Current weights: 
+neuron  0 : w0 =  -0.09 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.41 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.08 , w1 =  -0.67 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.27 , w2 =   0.47
+neuron  1 : w0 =  -0.42 , w1 =  -0.70 , w2 =  -0.89
+neuron  2 : w0 =  -0.07 , w1 =  -0.67 , w2 =  -0.77
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.43 , w1 =  -0.70 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.67 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.42 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.66 , w2 =  -0.78
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4352
+x1 =  -1.0 , x2 =   1.0 y =  0.5692
+x1 =   1.0 , x2 =  -1.0 y =  0.5811
+x1 =   1.0 , x2 =   1.0 y =  0.5798
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.43 , w1 =  -0.70 , w2 =  -0.89
+neuron  2 : w0 =  -0.06 , w1 =  -0.66 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.44 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.05 , w1 =  -0.66 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.44 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.67 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.43 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.66 , w2 =  -0.79
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4348
+x1 =  -1.0 , x2 =   1.0 y =  0.5701
+x1 =   1.0 , x2 =  -1.0 y =  0.5830
+x1 =   1.0 , x2 =   1.0 y =  0.5791
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.25 , w2 =   0.48
+neuron  1 : w0 =  -0.44 , w1 =  -0.72 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.67 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.49
+neuron  1 : w0 =  -0.44 , w1 =  -0.72 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.68 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.27 , w2 =   0.48
+neuron  1 : w0 =  -0.45 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.06 , w1 =  -0.67 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.44 , w1 =  -0.71 , w2 =  -0.88
+neuron  2 : w0 =  -0.07 , w1 =  -0.67 , w2 =  -0.79
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4345
+x1 =  -1.0 , x2 =   1.0 y =  0.5712
+x1 =   1.0 , x2 =  -1.0 y =  0.5847
+x1 =   1.0 , x2 =   1.0 y =  0.5785
+Current weights: 
+neuron  0 : w0 =  -0.10 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.44 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.66 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.27 , w2 =   0.47
+neuron  1 : w0 =  -0.45 , w1 =  -0.71 , w2 =  -0.89
+neuron  2 : w0 =  -0.07 , w1 =  -0.66 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.45 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.06 , w1 =  -0.66 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.27 , w2 =   0.48
+neuron  1 : w0 =  -0.45 , w1 =  -0.72 , w2 =  -0.88
+neuron  2 : w0 =  -0.08 , w1 =  -0.67 , w2 =  -0.79
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4343
+x1 =  -1.0 , x2 =   1.0 y =  0.5722
+x1 =   1.0 , x2 =  -1.0 y =  0.5867
+x1 =   1.0 , x2 =   1.0 y =  0.5778
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.45 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.66 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.26 , w2 =   0.48
+neuron  1 : w0 =  -0.46 , w1 =  -0.73 , w2 =  -0.88
+neuron  2 : w0 =  -0.08 , w1 =  -0.66 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.26 , w2 =   0.47
+neuron  1 : w0 =  -0.46 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.07 , w1 =  -0.66 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.27 , w2 =   0.48
+neuron  1 : w0 =  -0.46 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.08 , w1 =  -0.67 , w2 =  -0.80
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4341
+x1 =  -1.0 , x2 =   1.0 y =  0.5732
+x1 =   1.0 , x2 =  -1.0 y =  0.5886
+x1 =   1.0 , x2 =   1.0 y =  0.5770
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.46 , w1 =  -0.72 , w2 =  -0.88
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.78
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.29 , w2 =   0.48
+neuron  1 : w0 =  -0.47 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.68 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.28 , w2 =   0.48
+neuron  1 : w0 =  -0.46 , w1 =  -0.72 , w2 =  -0.89
+neuron  2 : w0 =  -0.10 , w1 =  -0.67 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.48
+neuron  1 : w0 =  -0.47 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.67 , w2 =  -0.80
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4338
+x1 =  -1.0 , x2 =   1.0 y =  0.5744
+x1 =   1.0 , x2 =  -1.0 y =  0.5906
+x1 =   1.0 , x2 =   1.0 y =  0.5766
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.27 , w2 =   0.49
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.88
+neuron  2 : w0 =  -0.08 , w1 =  -0.68 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.50
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.88
+neuron  2 : w0 =  -0.09 , w1 =  -0.68 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.88
+neuron  2 : w0 =  -0.08 , w1 =  -0.68 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.68 , w2 =  -0.81
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4334
+x1 =  -1.0 , x2 =   1.0 y =  0.5755
+x1 =   1.0 , x2 =  -1.0 y =  0.5922
+x1 =   1.0 , x2 =   1.0 y =  0.5760
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.68 , w2 =  -0.79
+==========
+Current weights: 
+neuron  0 : w0 =  -0.11 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.68 , w2 =  -0.80
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.29 , w2 =   0.48
+neuron  1 : w0 =  -0.48 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.67 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.49 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.81
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4331
+x1 =  -1.0 , x2 =   1.0 y =  0.5768
+x1 =   1.0 , x2 =  -1.0 y =  0.5942
+x1 =   1.0 , x2 =   1.0 y =  0.5755
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.50 , w1 =  -0.74 , w2 =  -0.88
+neuron  2 : w0 =  -0.09 , w1 =  -0.68 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.27 , w2 =   0.49
+neuron  1 : w0 =  -0.50 , w1 =  -0.74 , w2 =  -0.88
+neuron  2 : w0 =  -0.10 , w1 =  -0.67 , w2 =  -0.82
+==========
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.28 , w2 =   0.50
+neuron  1 : w0 =  -0.49 , w1 =  -0.74 , w2 =  -0.88
+neuron  2 : w0 =  -0.11 , w1 =  -0.68 , w2 =  -0.81
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.50 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.81
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4326
+x1 =  -1.0 , x2 =   1.0 y =  0.5780
+x1 =   1.0 , x2 =  -1.0 y =  0.5957
+x1 =   1.0 , x2 =   1.0 y =  0.5749
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.29 , w2 =   0.48
+neuron  1 : w0 =  -0.51 , w1 =  -0.73 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.68 , w2 =  -0.82
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.51 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.08 , w1 =  -0.68 , w2 =  -0.82
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.28 , w2 =   0.48
+neuron  1 : w0 =  -0.51 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.67 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.51 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.68 , w2 =  -0.82
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4320
+x1 =  -1.0 , x2 =   1.0 y =  0.5789
+x1 =   1.0 , x2 =  -1.0 y =  0.5972
+x1 =   1.0 , x2 =   1.0 y =  0.5741
+Current weights: 
+neuron  0 : w0 =  -0.12 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.51 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.68 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.28 , w2 =   0.49
+neuron  1 : w0 =  -0.51 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.68 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.52 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.52 , w1 =  -0.74 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.69 , w2 =  -0.82
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4316
+x1 =  -1.0 , x2 =   1.0 y =  0.5799
+x1 =   1.0 , x2 =  -1.0 y =  0.5989
+x1 =   1.0 , x2 =   1.0 y =  0.5733
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.52 , w1 =  -0.74 , w2 =  -0.90
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.53 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.09 , w1 =  -0.69 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.29 , w2 =   0.49
+neuron  1 : w0 =  -0.53 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.10 , w1 =  -0.68 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.30 , w2 =   0.50
+neuron  1 : w0 =  -0.53 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.69 , w2 =  -0.83
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4309
+x1 =  -1.0 , x2 =   1.0 y =  0.5809
+x1 =   1.0 , x2 =  -1.0 y =  0.6003
+x1 =   1.0 , x2 =   1.0 y =  0.5725
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.52 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.13 , w1 =  -0.68 , w2 =  -0.83
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.29 , w2 =   0.50
+neuron  1 : w0 =  -0.53 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.68 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.30 , w2 =   0.50
+neuron  1 : w0 =  -0.53 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.13 , w1 =  -0.69 , w2 =  -0.82
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.30 , w2 =   0.50
+neuron  1 : w0 =  -0.54 , w1 =  -0.75 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.69 , w2 =  -0.83
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4305
+x1 =  -1.0 , x2 =   1.0 y =  0.5822
+x1 =   1.0 , x2 =  -1.0 y =  0.6019
+x1 =   1.0 , x2 =   1.0 y =  0.5719
+Current weights: 
+neuron  0 : w0 =  -0.13 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.53 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.13 , w1 =  -0.68 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.29 , w2 =   0.50
+neuron  1 : w0 =  -0.54 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.69 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.30 , w2 =   0.49
+neuron  1 : w0 =  -0.55 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.68 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.31 , w2 =   0.50
+neuron  1 : w0 =  -0.55 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.69 , w2 =  -0.83
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4299
+x1 =  -1.0 , x2 =   1.0 y =  0.5833
+x1 =   1.0 , x2 =  -1.0 y =  0.6035
+x1 =   1.0 , x2 =   1.0 y =  0.5711
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.30 , w2 =   0.50
+neuron  1 : w0 =  -0.54 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.13 , w1 =  -0.69 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.30 , w2 =   0.50
+neuron  1 : w0 =  -0.55 , w1 =  -0.77 , w2 =  -0.89
+neuron  2 : w0 =  -0.13 , w1 =  -0.69 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.31 , w2 =   0.49
+neuron  1 : w0 =  -0.55 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.12 , w1 =  -0.69 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.14 , w1 =   0.31 , w2 =   0.50
+neuron  1 : w0 =  -0.55 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.13 , w1 =  -0.70 , w2 =  -0.84
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4294
+x1 =  -1.0 , x2 =   1.0 y =  0.5844
+x1 =   1.0 , x2 =  -1.0 y =  0.6050
+x1 =   1.0 , x2 =   1.0 y =  0.5703
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.31 , w2 =   0.51
+neuron  1 : w0 =  -0.56 , w1 =  -0.77 , w2 =  -0.89
+neuron  2 : w0 =  -0.12 , w1 =  -0.70 , w2 =  -0.84
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.31 , w2 =   0.50
+neuron  1 : w0 =  -0.57 , w1 =  -0.76 , w2 =  -0.89
+neuron  2 : w0 =  -0.11 , w1 =  -0.70 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.31 , w2 =   0.50
+neuron  1 : w0 =  -0.56 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.12 , w1 =  -0.69 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.32 , w2 =   0.50
+neuron  1 : w0 =  -0.56 , w1 =  -0.76 , w2 =  -0.90
+neuron  2 : w0 =  -0.13 , w1 =  -0.70 , w2 =  -0.84
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4286
+x1 =  -1.0 , x2 =   1.0 y =  0.5854
+x1 =   1.0 , x2 =  -1.0 y =  0.6062
+x1 =   1.0 , x2 =   1.0 y =  0.5694
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.31 , w2 =   0.51
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.89
+neuron  2 : w0 =  -0.13 , w1 =  -0.70 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.31 , w2 =   0.51
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.89
+neuron  2 : w0 =  -0.14 , w1 =  -0.69 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.31 , w2 =   0.50
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.90
+neuron  2 : w0 =  -0.13 , w1 =  -0.69 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.32 , w2 =   0.51
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.90
+neuron  2 : w0 =  -0.14 , w1 =  -0.70 , w2 =  -0.85
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4279
+x1 =  -1.0 , x2 =   1.0 y =  0.5865
+x1 =   1.0 , x2 =  -1.0 y =  0.6075
+x1 =   1.0 , x2 =   1.0 y =  0.5686
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.32 , w2 =   0.50
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.90
+neuron  2 : w0 =  -0.15 , w1 =  -0.69 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.32 , w2 =   0.50
+neuron  1 : w0 =  -0.57 , w1 =  -0.77 , w2 =  -0.91
+neuron  2 : w0 =  -0.14 , w1 =  -0.69 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.33 , w2 =   0.50
+neuron  1 : w0 =  -0.57 , w1 =  -0.76 , w2 =  -0.91
+neuron  2 : w0 =  -0.15 , w1 =  -0.70 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.33 , w2 =   0.51
+neuron  1 : w0 =  -0.58 , w1 =  -0.77 , w2 =  -0.90
+neuron  2 : w0 =  -0.14 , w1 =  -0.70 , w2 =  -0.85
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4274
+x1 =  -1.0 , x2 =   1.0 y =  0.5876
+x1 =   1.0 , x2 =  -1.0 y =  0.6092
+x1 =   1.0 , x2 =   1.0 y =  0.5679
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.32 , w2 =   0.51
+neuron  1 : w0 =  -0.59 , w1 =  -0.78 , w2 =  -0.89
+neuron  2 : w0 =  -0.14 , w1 =  -0.71 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.32 , w2 =   0.51
+neuron  1 : w0 =  -0.58 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.15 , w1 =  -0.70 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.32 , w2 =   0.50
+neuron  1 : w0 =  -0.59 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.14 , w1 =  -0.70 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.33 , w2 =   0.51
+neuron  1 : w0 =  -0.59 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.15 , w1 =  -0.71 , w2 =  -0.86
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4266
+x1 =  -1.0 , x2 =   1.0 y =  0.5887
+x1 =   1.0 , x2 =  -1.0 y =  0.6104
+x1 =   1.0 , x2 =   1.0 y =  0.5670
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.33 , w2 =   0.51
+neuron  1 : w0 =  -0.58 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.16 , w1 =  -0.70 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.33 , w2 =   0.51
+neuron  1 : w0 =  -0.58 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.17 , w1 =  -0.71 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.33 , w2 =   0.52
+neuron  1 : w0 =  -0.59 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.16 , w1 =  -0.71 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.33 , w2 =   0.51
+neuron  1 : w0 =  -0.60 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.15 , w1 =  -0.71 , w2 =  -0.86
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4260
+x1 =  -1.0 , x2 =   1.0 y =  0.5902
+x1 =   1.0 , x2 =  -1.0 y =  0.6121
+x1 =   1.0 , x2 =   1.0 y =  0.5664
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.34 , w2 =   0.52
+neuron  1 : w0 =  -0.60 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.17 , w1 =  -0.72 , w2 =  -0.85
+==========
+Current weights: 
+neuron  0 : w0 =  -0.15 , w1 =   0.34 , w2 =   0.52
+neuron  1 : w0 =  -0.59 , w1 =  -0.78 , w2 =  -0.91
+neuron  2 : w0 =  -0.18 , w1 =  -0.71 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.34 , w2 =   0.51
+neuron  1 : w0 =  -0.60 , w1 =  -0.78 , w2 =  -0.91
+neuron  2 : w0 =  -0.17 , w1 =  -0.71 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.34 , w2 =   0.51
+neuron  1 : w0 =  -0.60 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.16 , w1 =  -0.71 , w2 =  -0.87
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4254
+x1 =  -1.0 , x2 =   1.0 y =  0.5916
+x1 =   1.0 , x2 =  -1.0 y =  0.6137
+x1 =   1.0 , x2 =   1.0 y =  0.5659
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.33 , w2 =   0.52
+neuron  1 : w0 =  -0.61 , w1 =  -0.79 , w2 =  -0.90
+neuron  2 : w0 =  -0.15 , w1 =  -0.72 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.34 , w2 =   0.51
+neuron  1 : w0 =  -0.62 , w1 =  -0.78 , w2 =  -0.90
+neuron  2 : w0 =  -0.14 , w1 =  -0.72 , w2 =  -0.88
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.34 , w2 =   0.51
+neuron  1 : w0 =  -0.61 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.15 , w1 =  -0.71 , w2 =  -0.89
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.34 , w2 =   0.52
+neuron  1 : w0 =  -0.61 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.16 , w1 =  -0.72 , w2 =  -0.87
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4245
+x1 =  -1.0 , x2 =   1.0 y =  0.5927
+x1 =   1.0 , x2 =  -1.0 y =  0.6148
+x1 =   1.0 , x2 =   1.0 y =  0.5649
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.35 , w2 =   0.52
+neuron  1 : w0 =  -0.61 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.34 , w2 =   0.53
+neuron  1 : w0 =  -0.62 , w1 =  -0.79 , w2 =  -0.90
+neuron  2 : w0 =  -0.17 , w1 =  -0.73 , w2 =  -0.86
+==========
+Current weights: 
+neuron  0 : w0 =  -0.16 , w1 =   0.34 , w2 =   0.53
+neuron  1 : w0 =  -0.61 , w1 =  -0.80 , w2 =  -0.90
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.35 , w2 =   0.52
+neuron  1 : w0 =  -0.62 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.17 , w1 =  -0.72 , w2 =  -0.88
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4238
+x1 =  -1.0 , x2 =   1.0 y =  0.5941
+x1 =   1.0 , x2 =  -1.0 y =  0.6162
+x1 =   1.0 , x2 =   1.0 y =  0.5643
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.35 , w2 =   0.51
+neuron  1 : w0 =  -0.63 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.16 , w1 =  -0.72 , w2 =  -0.88
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.62 , w1 =  -0.79 , w2 =  -0.91
+neuron  2 : w0 =  -0.17 , w1 =  -0.73 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.62 , w1 =  -0.79 , w2 =  -0.92
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.88
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.35 , w2 =   0.52
+neuron  1 : w0 =  -0.63 , w1 =  -0.80 , w2 =  -0.91
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.88
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4230
+x1 =  -1.0 , x2 =   1.0 y =  0.5953
+x1 =   1.0 , x2 =  -1.0 y =  0.6177
+x1 =   1.0 , x2 =   1.0 y =  0.5635
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.36 , w2 =   0.51
+neuron  1 : w0 =  -0.63 , w1 =  -0.79 , w2 =  -0.92
+neuron  2 : w0 =  -0.17 , w1 =  -0.72 , w2 =  -0.89
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.36 , w2 =   0.51
+neuron  1 : w0 =  -0.63 , w1 =  -0.79 , w2 =  -0.92
+neuron  2 : w0 =  -0.18 , w1 =  -0.71 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.63 , w1 =  -0.79 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.72 , w2 =  -0.88
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.64 , w1 =  -0.80 , w2 =  -0.91
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.89
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4222
+x1 =  -1.0 , x2 =   1.0 y =  0.5964
+x1 =   1.0 , x2 =  -1.0 y =  0.6192
+x1 =   1.0 , x2 =   1.0 y =  0.5626
+Current weights: 
+neuron  0 : w0 =  -0.17 , w1 =   0.36 , w2 =   0.53
+neuron  1 : w0 =  -0.64 , w1 =  -0.80 , w2 =  -0.91
+neuron  2 : w0 =  -0.19 , w1 =  -0.73 , w2 =  -0.87
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.36 , w2 =   0.54
+neuron  1 : w0 =  -0.64 , w1 =  -0.81 , w2 =  -0.91
+neuron  2 : w0 =  -0.19 , w1 =  -0.74 , w2 =  -0.88
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.35 , w2 =   0.53
+neuron  1 : w0 =  -0.64 , w1 =  -0.81 , w2 =  -0.91
+neuron  2 : w0 =  -0.20 , w1 =  -0.73 , w2 =  -0.89
+==========
+Current weights: 
+neuron  0 : w0 =  -0.18 , w1 =   0.36 , w2 =   0.53
+neuron  1 : w0 =  -0.64 , w1 =  -0.80 , w2 =  -0.91
+neuron  2 : w0 =  -0.19 , w1 =  -0.73 , w2 =  -0.89
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4214
+x1 =  -1.0 , x2 =   1.0 y =  0.5979
+x1 =   1.0 , x2 =  -1.0 y =  0.6205
+x1 =   1.0 , x2 =   1.0 y =  0.5619
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.37 , w2 =   0.52
+neuron  1 : w0 =  -0.65 , w1 =  -0.80 , w2 =  -0.92
+neuron  2 : w0 =  -0.18 , w1 =  -0.73 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.65 , w1 =  -0.80 , w2 =  -0.91
+neuron  2 : w0 =  -0.17 , w1 =  -0.73 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.36 , w2 =   0.52
+neuron  1 : w0 =  -0.65 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.18 , w1 =  -0.72 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.65 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.73 , w2 =  -0.90
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4204
+x1 =  -1.0 , x2 =   1.0 y =  0.5990
+x1 =   1.0 , x2 =  -1.0 y =  0.6216
+x1 =   1.0 , x2 =   1.0 y =  0.5609
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.36 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.91
+neuron  2 : w0 =  -0.18 , w1 =  -0.73 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.17 , w1 =  -0.73 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.74 , w2 =  -0.89
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.20 , w1 =  -0.73 , w2 =  -0.90
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4194
+x1 =  -1.0 , x2 =   1.0 y =  0.6001
+x1 =   1.0 , x2 =  -1.0 y =  0.6226
+x1 =   1.0 , x2 =   1.0 y =  0.5598
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.38 , w2 =   0.52
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.73 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.38 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.20 , w1 =  -0.74 , w2 =  -0.89
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.38 , w2 =   0.54
+neuron  1 : w0 =  -0.67 , w1 =  -0.81 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.75 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.38 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.20 , w1 =  -0.74 , w2 =  -0.91
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4185
+x1 =  -1.0 , x2 =   1.0 y =  0.6013
+x1 =   1.0 , x2 =  -1.0 y =  0.6239
+x1 =   1.0 , x2 =   1.0 y =  0.5589
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.66 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.21 , w1 =  -0.73 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.37 , w2 =   0.54
+neuron  1 : w0 =  -0.67 , w1 =  -0.83 , w2 =  -0.92
+neuron  2 : w0 =  -0.20 , w1 =  -0.73 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.37 , w2 =   0.53
+neuron  1 : w0 =  -0.67 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.19 , w1 =  -0.73 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.38 , w2 =   0.54
+neuron  1 : w0 =  -0.67 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.21 , w1 =  -0.74 , w2 =  -0.91
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4177
+x1 =  -1.0 , x2 =   1.0 y =  0.6025
+x1 =   1.0 , x2 =  -1.0 y =  0.6250
+x1 =   1.0 , x2 =   1.0 y =  0.5578
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.67 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.22 , w1 =  -0.75 , w2 =  -0.90
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.38 , w2 =   0.54
+neuron  1 : w0 =  -0.67 , w1 =  -0.82 , w2 =  -0.93
+neuron  2 : w0 =  -0.23 , w1 =  -0.74 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.19 , w1 =   0.38 , w2 =   0.55
+neuron  1 : w0 =  -0.67 , w1 =  -0.83 , w2 =  -0.92
+neuron  2 : w0 =  -0.22 , w1 =  -0.74 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.68 , w1 =  -0.82 , w2 =  -0.93
+neuron  2 : w0 =  -0.21 , w1 =  -0.74 , w2 =  -0.92
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4169
+x1 =  -1.0 , x2 =   1.0 y =  0.6041
+x1 =   1.0 , x2 =  -1.0 y =  0.6265
+x1 =   1.0 , x2 =   1.0 y =  0.5571
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.39 , w2 =   0.53
+neuron  1 : w0 =  -0.68 , w1 =  -0.82 , w2 =  -0.93
+neuron  2 : w0 =  -0.20 , w1 =  -0.74 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.40 , w2 =   0.54
+neuron  1 : w0 =  -0.68 , w1 =  -0.82 , w2 =  -0.93
+neuron  2 : w0 =  -0.22 , w1 =  -0.75 , w2 =  -0.91
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.82 , w2 =  -0.92
+neuron  2 : w0 =  -0.21 , w1 =  -0.76 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.93
+neuron  2 : w0 =  -0.22 , w1 =  -0.75 , w2 =  -0.92
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4159
+x1 =  -1.0 , x2 =   1.0 y =  0.6053
+x1 =   1.0 , x2 =  -1.0 y =  0.6277
+x1 =   1.0 , x2 =   1.0 y =  0.5561
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.68 , w1 =  -0.83 , w2 =  -0.93
+neuron  2 : w0 =  -0.23 , w1 =  -0.74 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.40 , w2 =   0.53
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.22 , w1 =  -0.74 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.40 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.23 , w1 =  -0.75 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.40 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.93
+neuron  2 : w0 =  -0.23 , w1 =  -0.75 , w2 =  -0.93
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4151
+x1 =  -1.0 , x2 =   1.0 y =  0.6066
+x1 =   1.0 , x2 =  -1.0 y =  0.6291
+x1 =   1.0 , x2 =   1.0 y =  0.5551
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.39 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.84 , w2 =  -0.93
+neuron  2 : w0 =  -0.24 , w1 =  -0.74 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.20 , w1 =   0.40 , w2 =   0.55
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.93
+neuron  2 : w0 =  -0.25 , w1 =  -0.75 , w2 =  -0.92
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.41 , w2 =   0.54
+neuron  1 : w0 =  -0.69 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.24 , w1 =  -0.75 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.40 , w2 =   0.55
+neuron  1 : w0 =  -0.70 , w1 =  -0.84 , w2 =  -0.93
+neuron  2 : w0 =  -0.23 , w1 =  -0.76 , w2 =  -0.93
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4143
+x1 =  -1.0 , x2 =   1.0 y =  0.6082
+x1 =   1.0 , x2 =  -1.0 y =  0.6305
+x1 =   1.0 , x2 =   1.0 y =  0.5543
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.41 , w2 =   0.54
+neuron  1 : w0 =  -0.71 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.22 , w1 =  -0.76 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.41 , w2 =   0.55
+neuron  1 : w0 =  -0.71 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.23 , w1 =  -0.76 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.21 , w1 =   0.41 , w2 =   0.54
+neuron  1 : w0 =  -0.70 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.24 , w1 =  -0.76 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.41 , w2 =   0.55
+neuron  1 : w0 =  -0.71 , w1 =  -0.84 , w2 =  -0.93
+neuron  2 : w0 =  -0.24 , w1 =  -0.76 , w2 =  -0.94
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4134
+x1 =  -1.0 , x2 =   1.0 y =  0.6094
+x1 =   1.0 , x2 =  -1.0 y =  0.6318
+x1 =   1.0 , x2 =   1.0 y =  0.5533
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.41 , w2 =   0.54
+neuron  1 : w0 =  -0.71 , w1 =  -0.84 , w2 =  -0.94
+neuron  2 : w0 =  -0.23 , w1 =  -0.76 , w2 =  -0.95
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.42 , w2 =   0.55
+neuron  1 : w0 =  -0.71 , w1 =  -0.83 , w2 =  -0.94
+neuron  2 : w0 =  -0.24 , w1 =  -0.77 , w2 =  -0.93
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.42 , w2 =   0.55
+neuron  1 : w0 =  -0.71 , w1 =  -0.84 , w2 =  -0.94
+neuron  2 : w0 =  -0.25 , w1 =  -0.76 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.41 , w2 =   0.55
+neuron  1 : w0 =  -0.71 , w1 =  -0.84 , w2 =  -0.94
+neuron  2 : w0 =  -0.24 , w1 =  -0.76 , w2 =  -0.94
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4124
+x1 =  -1.0 , x2 =   1.0 y =  0.6107
+x1 =   1.0 , x2 =  -1.0 y =  0.6331
+x1 =   1.0 , x2 =   1.0 y =  0.5522
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.55
+neuron  1 : w0 =  -0.72 , w1 =  -0.84 , w2 =  -0.94
+neuron  2 : w0 =  -0.23 , w1 =  -0.76 , w2 =  -0.95
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.54
+neuron  1 : w0 =  -0.72 , w1 =  -0.84 , w2 =  -0.95
+neuron  2 : w0 =  -0.24 , w1 =  -0.76 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.42 , w2 =   0.55
+neuron  1 : w0 =  -0.72 , w1 =  -0.84 , w2 =  -0.94
+neuron  2 : w0 =  -0.26 , w1 =  -0.76 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.55
+neuron  1 : w0 =  -0.72 , w1 =  -0.85 , w2 =  -0.94
+neuron  2 : w0 =  -0.25 , w1 =  -0.77 , w2 =  -0.95
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4115
+x1 =  -1.0 , x2 =   1.0 y =  0.6120
+x1 =   1.0 , x2 =  -1.0 y =  0.6344
+x1 =   1.0 , x2 =   1.0 y =  0.5511
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.72 , w1 =  -0.85 , w2 =  -0.94
+neuron  2 : w0 =  -0.26 , w1 =  -0.78 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.57
+neuron  1 : w0 =  -0.73 , w1 =  -0.85 , w2 =  -0.93
+neuron  2 : w0 =  -0.25 , w1 =  -0.78 , w2 =  -0.94
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.73 , w1 =  -0.85 , w2 =  -0.94
+neuron  2 : w0 =  -0.24 , w1 =  -0.78 , w2 =  -0.95
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.73 , w1 =  -0.85 , w2 =  -0.94
+neuron  2 : w0 =  -0.25 , w1 =  -0.77 , w2 =  -0.96
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4105
+x1 =  -1.0 , x2 =   1.0 y =  0.6135
+x1 =   1.0 , x2 =  -1.0 y =  0.6355
+x1 =   1.0 , x2 =   1.0 y =  0.5502
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.72 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.26 , w1 =  -0.76 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.22 , w1 =   0.43 , w2 =   0.56
+neuron  1 : w0 =  -0.72 , w1 =  -0.86 , w2 =  -0.94
+neuron  2 : w0 =  -0.28 , w1 =  -0.77 , w2 =  -0.95
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.57
+neuron  1 : w0 =  -0.73 , w1 =  -0.86 , w2 =  -0.94
+neuron  2 : w0 =  -0.27 , w1 =  -0.77 , w2 =  -0.95
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.43 , w2 =   0.56
+neuron  1 : w0 =  -0.73 , w1 =  -0.86 , w2 =  -0.94
+neuron  2 : w0 =  -0.26 , w1 =  -0.77 , w2 =  -0.96
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4096
+x1 =  -1.0 , x2 =   1.0 y =  0.6152
+x1 =   1.0 , x2 =  -1.0 y =  0.6369
+x1 =   1.0 , x2 =   1.0 y =  0.5492
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.73 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.27 , w1 =  -0.77 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.42 , w2 =   0.56
+neuron  1 : w0 =  -0.74 , w1 =  -0.87 , w2 =  -0.94
+neuron  2 : w0 =  -0.26 , w1 =  -0.77 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.42 , w2 =   0.57
+neuron  1 : w0 =  -0.74 , w1 =  -0.87 , w2 =  -0.94
+neuron  2 : w0 =  -0.27 , w1 =  -0.78 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.43 , w2 =   0.56
+neuron  1 : w0 =  -0.74 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.26 , w1 =  -0.78 , w2 =  -0.97
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4088
+x1 =  -1.0 , x2 =   1.0 y =  0.6168
+x1 =   1.0 , x2 =  -1.0 y =  0.6380
+x1 =   1.0 , x2 =   1.0 y =  0.5481
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.43 , w2 =   0.56
+neuron  1 : w0 =  -0.74 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.27 , w1 =  -0.77 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.23 , w1 =   0.44 , w2 =   0.57
+neuron  1 : w0 =  -0.74 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.29 , w1 =  -0.78 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.43 , w2 =   0.57
+neuron  1 : w0 =  -0.74 , w1 =  -0.87 , w2 =  -0.94
+neuron  2 : w0 =  -0.28 , w1 =  -0.78 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.44 , w2 =   0.57
+neuron  1 : w0 =  -0.75 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.27 , w1 =  -0.78 , w2 =  -0.97
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4079
+x1 =  -1.0 , x2 =   1.0 y =  0.6185
+x1 =   1.0 , x2 =  -1.0 y =  0.6393
+x1 =   1.0 , x2 =   1.0 y =  0.5471
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.44 , w2 =   0.57
+neuron  1 : w0 =  -0.75 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.28 , w1 =  -0.79 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.44 , w2 =   0.58
+neuron  1 : w0 =  -0.75 , w1 =  -0.87 , w2 =  -0.94
+neuron  2 : w0 =  -0.28 , w1 =  -0.79 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.44 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.86 , w2 =  -0.95
+neuron  2 : w0 =  -0.27 , w1 =  -0.80 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.44 , w2 =   0.57
+neuron  1 : w0 =  -0.75 , w1 =  -0.87 , w2 =  -0.95
+neuron  2 : w0 =  -0.28 , w1 =  -0.79 , w2 =  -0.98
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4068
+x1 =  -1.0 , x2 =   1.0 y =  0.6200
+x1 =   1.0 , x2 =  -1.0 y =  0.6404
+x1 =   1.0 , x2 =   1.0 y =  0.5461
+Current weights: 
+neuron  0 : w0 =  -0.24 , w1 =   0.45 , w2 =   0.57
+neuron  1 : w0 =  -0.75 , w1 =  -0.87 , w2 =  -0.95
+neuron  2 : w0 =  -0.29 , w1 =  -0.80 , w2 =  -0.96
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.46 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.86 , w2 =  -0.96
+neuron  2 : w0 =  -0.28 , w1 =  -0.80 , w2 =  -0.97
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.45 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.87 , w2 =  -0.95
+neuron  2 : w0 =  -0.27 , w1 =  -0.80 , w2 =  -0.98
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.45 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.87 , w2 =  -0.96
+neuron  2 : w0 =  -0.28 , w1 =  -0.79 , w2 =  -0.98
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4058
+x1 =  -1.0 , x2 =   1.0 y =  0.6215
+x1 =   1.0 , x2 =  -1.0 y =  0.6416
+x1 =   1.0 , x2 =   1.0 y =  0.5450
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.46 , w2 =   0.56
+neuron  1 : w0 =  -0.76 , w1 =  -0.87 , w2 =  -0.96
+neuron  2 : w0 =  -0.27 , w1 =  -0.79 , w2 =  -0.99
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.46 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.87 , w2 =  -0.96
+neuron  2 : w0 =  -0.29 , w1 =  -0.80 , w2 =  -0.98
+==========
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.46 , w2 =   0.57
+neuron  1 : w0 =  -0.76 , w1 =  -0.87 , w2 =  -0.96
+neuron  2 : w0 =  -0.30 , w1 =  -0.79 , w2 =  -0.98
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.45 , w2 =   0.57
+neuron  1 : w0 =  -0.77 , w1 =  -0.88 , w2 =  -0.96
+neuron  2 : w0 =  -0.29 , w1 =  -0.80 , w2 =  -0.99
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4047
+x1 =  -1.0 , x2 =   1.0 y =  0.6228
+x1 =   1.0 , x2 =  -1.0 y =  0.6428
+x1 =   1.0 , x2 =   1.0 y =  0.5437
+Current weights: 
+neuron  0 : w0 =  -0.25 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.88 , w2 =  -0.96
+neuron  2 : w0 =  -0.30 , w1 =  -0.80 , w2 =  -0.98
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.47 , w2 =   0.57
+neuron  1 : w0 =  -0.77 , w1 =  -0.87 , w2 =  -0.96
+neuron  2 : w0 =  -0.29 , w1 =  -0.81 , w2 =  -0.98
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.78 , w1 =  -0.88 , w2 =  -0.96
+neuron  2 : w0 =  -0.28 , w1 =  -0.81 , w2 =  -0.99
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.88 , w2 =  -0.96
+neuron  2 : w0 =  -0.29 , w1 =  -0.80 , w2 =  -0.99
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4037
+x1 =  -1.0 , x2 =   1.0 y =  0.6243
+x1 =   1.0 , x2 =  -1.0 y =  0.6440
+x1 =   1.0 , x2 =   1.0 y =  0.5425
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.88 , w2 =  -0.96
+neuron  2 : w0 =  -0.30 , w1 =  -0.79 , w2 =  -1.00
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.45 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.89 , w2 =  -0.96
+neuron  2 : w0 =  -0.30 , w1 =  -0.79 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.46 , w2 =   0.59
+neuron  1 : w0 =  -0.77 , w1 =  -0.89 , w2 =  -0.96
+neuron  2 : w0 =  -0.31 , w1 =  -0.80 , w2 =  -0.99
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.78 , w1 =  -0.89 , w2 =  -0.96
+neuron  2 : w0 =  -0.30 , w1 =  -0.80 , w2 =  -1.00
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4027
+x1 =  -1.0 , x2 =   1.0 y =  0.6260
+x1 =   1.0 , x2 =  -1.0 y =  0.6450
+x1 =   1.0 , x2 =   1.0 y =  0.5412
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.46 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.31 , w1 =  -0.80 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.47 , w2 =   0.58
+neuron  1 : w0 =  -0.77 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.80 , w2 =  -0.99
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.48 , w2 =   0.58
+neuron  1 : w0 =  -0.78 , w1 =  -0.88 , w2 =  -0.97
+neuron  2 : w0 =  -0.31 , w1 =  -0.81 , w2 =  -1.00
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.47 , w2 =   0.58
+neuron  1 : w0 =  -0.78 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.31 , w1 =  -0.81 , w2 =  -1.01
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4018
+x1 =  -1.0 , x2 =   1.0 y =  0.6276
+x1 =   1.0 , x2 =  -1.0 y =  0.6463
+x1 =   1.0 , x2 =   1.0 y =  0.5401
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.48 , w2 =   0.59
+neuron  1 : w0 =  -0.78 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.82 , w2 =  -0.99
+==========
+Current weights: 
+neuron  0 : w0 =  -0.26 , w1 =   0.47 , w2 =   0.59
+neuron  1 : w0 =  -0.78 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.33 , w1 =  -0.81 , w2 =  -1.00
+==========
+Current weights: 
+neuron  0 : w0 =  -0.27 , w1 =   0.48 , w2 =   0.58
+neuron  1 : w0 =  -0.78 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.81 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.59
+neuron  1 : w0 =  -0.79 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.31 , w1 =  -0.81 , w2 =  -1.01
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.4009
+x1 =  -1.0 , x2 =   1.0 y =  0.6292
+x1 =   1.0 , x2 =  -1.0 y =  0.6476
+x1 =   1.0 , x2 =   1.0 y =  0.5389
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.58
+neuron  1 : w0 =  -0.79 , w1 =  -0.89 , w2 =  -0.97
+neuron  2 : w0 =  -0.30 , w1 =  -0.81 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.58
+neuron  1 : w0 =  -0.79 , w1 =  -0.89 , w2 =  -0.98
+neuron  2 : w0 =  -0.31 , w1 =  -0.81 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.49 , w2 =   0.58
+neuron  1 : w0 =  -0.79 , w1 =  -0.89 , w2 =  -0.98
+neuron  2 : w0 =  -0.33 , w1 =  -0.82 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.59
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.82 , w2 =  -1.02
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3999
+x1 =  -1.0 , x2 =   1.0 y =  0.6305
+x1 =   1.0 , x2 =  -1.0 y =  0.6488
+x1 =   1.0 , x2 =   1.0 y =  0.5375
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.49 , w2 =   0.60
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.97
+neuron  2 : w0 =  -0.33 , w1 =  -0.83 , w2 =  -1.00
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.60
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.83 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.60
+neuron  1 : w0 =  -0.80 , w1 =  -0.91 , w2 =  -0.97
+neuron  2 : w0 =  -0.33 , w1 =  -0.82 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.49 , w2 =   0.59
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.97
+neuron  2 : w0 =  -0.32 , w1 =  -0.82 , w2 =  -1.02
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3989
+x1 =  -1.0 , x2 =   1.0 y =  0.6322
+x1 =   1.0 , x2 =  -1.0 y =  0.6500
+x1 =   1.0 , x2 =   1.0 y =  0.5362
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.48 , w2 =   0.59
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.98
+neuron  2 : w0 =  -0.33 , w1 =  -0.81 , w2 =  -1.03
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.49 , w2 =   0.58
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.98
+neuron  2 : w0 =  -0.33 , w1 =  -0.82 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.50 , w2 =   0.59
+neuron  1 : w0 =  -0.80 , w1 =  -0.90 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.82 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.49 , w2 =   0.60
+neuron  1 : w0 =  -0.81 , w1 =  -0.91 , w2 =  -0.98
+neuron  2 : w0 =  -0.33 , w1 =  -0.83 , w2 =  -1.03
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3979
+x1 =  -1.0 , x2 =   1.0 y =  0.6335
+x1 =   1.0 , x2 =  -1.0 y =  0.6512
+x1 =   1.0 , x2 =   1.0 y =  0.5347
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.50 , w2 =   0.60
+neuron  1 : w0 =  -0.81 , w1 =  -0.91 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.84 , w2 =  -1.01
+==========
+Current weights: 
+neuron  0 : w0 =  -0.28 , w1 =   0.50 , w2 =   0.60
+neuron  1 : w0 =  -0.80 , w1 =  -0.91 , w2 =  -0.98
+neuron  2 : w0 =  -0.35 , w1 =  -0.83 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.50 , w2 =   0.59
+neuron  1 : w0 =  -0.81 , w1 =  -0.90 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.83 , w2 =  -1.03
+==========
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.50 , w2 =   0.60
+neuron  1 : w0 =  -0.81 , w1 =  -0.91 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.83 , w2 =  -1.03
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3970
+x1 =  -1.0 , x2 =   1.0 y =  0.6352
+x1 =   1.0 , x2 =  -1.0 y =  0.6525
+x1 =   1.0 , x2 =   1.0 y =  0.5335
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.49 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.91 , w2 =  -0.97
+neuron  2 : w0 =  -0.33 , w1 =  -0.84 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.50 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.91 , w2 =  -0.97
+neuron  2 : w0 =  -0.34 , w1 =  -0.84 , w2 =  -1.02
+==========
+Current weights: 
+neuron  0 : w0 =  -0.29 , w1 =   0.50 , w2 =   0.61
+neuron  1 : w0 =  -0.81 , w1 =  -0.92 , w2 =  -0.98
+neuron  2 : w0 =  -0.35 , w1 =  -0.84 , w2 =  -1.03
+==========
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.50 , w2 =   0.60
+neuron  1 : w0 =  -0.82 , w1 =  -0.91 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.84 , w2 =  -1.04
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3959
+x1 =  -1.0 , x2 =   1.0 y =  0.6368
+x1 =   1.0 , x2 =  -1.0 y =  0.6534
+x1 =   1.0 , x2 =   1.0 y =  0.5320
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.50 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.92 , w2 =  -0.98
+neuron  2 : w0 =  -0.33 , w1 =  -0.84 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.50 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.92 , w2 =  -0.98
+neuron  2 : w0 =  -0.34 , w1 =  -0.83 , w2 =  -1.05
+==========
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.50 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.92 , w2 =  -0.98
+neuron  2 : w0 =  -0.36 , w1 =  -0.84 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.51 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.92 , w2 =  -0.99
+neuron  2 : w0 =  -0.35 , w1 =  -0.84 , w2 =  -1.04
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3948
+x1 =  -1.0 , x2 =   1.0 y =  0.6384
+x1 =   1.0 , x2 =  -1.0 y =  0.6543
+x1 =   1.0 , x2 =   1.0 y =  0.5304
+Current weights: 
+neuron  0 : w0 =  -0.30 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.82 , w1 =  -0.92 , w2 =  -0.99
+neuron  2 : w0 =  -0.36 , w1 =  -0.85 , w2 =  -1.03
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.51 , w2 =   0.62
+neuron  1 : w0 =  -0.83 , w1 =  -0.92 , w2 =  -0.98
+neuron  2 : w0 =  -0.35 , w1 =  -0.85 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.83 , w1 =  -0.92 , w2 =  -0.99
+neuron  2 : w0 =  -0.35 , w1 =  -0.86 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.51 , w2 =   0.61
+neuron  1 : w0 =  -0.83 , w1 =  -0.92 , w2 =  -0.99
+neuron  2 : w0 =  -0.36 , w1 =  -0.85 , w2 =  -1.05
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3937
+x1 =  -1.0 , x2 =   1.0 y =  0.6399
+x1 =   1.0 , x2 =  -1.0 y =  0.6555
+x1 =   1.0 , x2 =   1.0 y =  0.5290
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.51 , w2 =   0.61
+neuron  1 : w0 =  -0.83 , w1 =  -0.93 , w2 =  -0.98
+neuron  2 : w0 =  -0.35 , w1 =  -0.85 , w2 =  -1.05
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.52 , w2 =   0.62
+neuron  1 : w0 =  -0.83 , w1 =  -0.93 , w2 =  -0.98
+neuron  2 : w0 =  -0.36 , w1 =  -0.86 , w2 =  -1.04
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.84 , w1 =  -0.92 , w2 =  -0.99
+neuron  2 : w0 =  -0.35 , w1 =  -0.86 , w2 =  -1.05
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.83 , w1 =  -0.93 , w2 =  -0.99
+neuron  2 : w0 =  -0.36 , w1 =  -0.85 , w2 =  -1.05
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3925
+x1 =  -1.0 , x2 =   1.0 y =  0.6414
+x1 =   1.0 , x2 =  -1.0 y =  0.6564
+x1 =   1.0 , x2 =   1.0 y =  0.5274
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.83 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.37 , w1 =  -0.84 , w2 =  -1.06
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.51 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -0.99
+neuron  2 : w0 =  -0.36 , w1 =  -0.85 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.33 , w1 =   0.52 , w2 =   0.61
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.36 , w1 =  -0.85 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.53 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -0.99
+neuron  2 : w0 =  -0.37 , w1 =  -0.86 , w2 =  -1.06
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3915
+x1 =  -1.0 , x2 =   1.0 y =  0.6428
+x1 =   1.0 , x2 =  -1.0 y =  0.6574
+x1 =   1.0 , x2 =   1.0 y =  0.5256
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.53 , w2 =   0.61
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.38 , w1 =  -0.85 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.31 , w1 =   0.53 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.39 , w1 =  -0.86 , w2 =  -1.05
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.53 , w2 =   0.63
+neuron  1 : w0 =  -0.84 , w1 =  -0.94 , w2 =  -0.99
+neuron  2 : w0 =  -0.38 , w1 =  -0.86 , w2 =  -1.06
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.53 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.37 , w1 =  -0.86 , w2 =  -1.07
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3906
+x1 =  -1.0 , x2 =   1.0 y =  0.6445
+x1 =   1.0 , x2 =  -1.0 y =  0.6587
+x1 =   1.0 , x2 =   1.0 y =  0.5242
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.53 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.94 , w2 =  -1.00
+neuron  2 : w0 =  -0.38 , w1 =  -0.85 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.84 , w1 =  -0.94 , w2 =  -1.00
+neuron  2 : w0 =  -0.40 , w1 =  -0.86 , w2 =  -1.06
+==========
+Current weights: 
+neuron  0 : w0 =  -0.32 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.85 , w1 =  -0.93 , w2 =  -1.01
+neuron  2 : w0 =  -0.39 , w1 =  -0.87 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.33 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.85 , w1 =  -0.94 , w2 =  -1.00
+neuron  2 : w0 =  -0.38 , w1 =  -0.87 , w2 =  -1.07
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3897
+x1 =  -1.0 , x2 =   1.0 y =  0.6461
+x1 =   1.0 , x2 =  -1.0 y =  0.6600
+x1 =   1.0 , x2 =   1.0 y =  0.5227
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.85 , w1 =  -0.93 , w2 =  -1.00
+neuron  2 : w0 =  -0.37 , w1 =  -0.87 , w2 =  -1.08
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.54 , w2 =   0.61
+neuron  1 : w0 =  -0.85 , w1 =  -0.94 , w2 =  -1.01
+neuron  2 : w0 =  -0.38 , w1 =  -0.86 , w2 =  -1.08
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.86 , w1 =  -0.94 , w2 =  -1.00
+neuron  2 : w0 =  -0.37 , w1 =  -0.86 , w2 =  -1.09
+==========
+Current weights: 
+neuron  0 : w0 =  -0.33 , w1 =   0.54 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.94 , w2 =  -1.00
+neuron  2 : w0 =  -0.39 , w1 =  -0.87 , w2 =  -1.08
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3886
+x1 =  -1.0 , x2 =   1.0 y =  0.6474
+x1 =   1.0 , x2 =  -1.0 y =  0.6610
+x1 =   1.0 , x2 =   1.0 y =  0.5209
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.54 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.95 , w2 =  -1.00
+neuron  2 : w0 =  -0.38 , w1 =  -0.88 , w2 =  -1.08
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.54 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.95 , w2 =  -1.00
+neuron  2 : w0 =  -0.39 , w1 =  -0.87 , w2 =  -1.09
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.54 , w2 =   0.62
+neuron  1 : w0 =  -0.86 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.38 , w1 =  -0.87 , w2 =  -1.09
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.55 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.94 , w2 =  -1.01
+neuron  2 : w0 =  -0.39 , w1 =  -0.88 , w2 =  -1.08
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3875
+x1 =  -1.0 , x2 =   1.0 y =  0.6487
+x1 =   1.0 , x2 =  -1.0 y =  0.6619
+x1 =   1.0 , x2 =   1.0 y =  0.5190
+Current weights: 
+neuron  0 : w0 =  -0.33 , w1 =   0.56 , w2 =   0.64
+neuron  1 : w0 =  -0.86 , w1 =  -0.94 , w2 =  -1.01
+neuron  2 : w0 =  -0.41 , w1 =  -0.89 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.56 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.94 , w2 =  -1.01
+neuron  2 : w0 =  -0.40 , w1 =  -0.89 , w2 =  -1.07
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.56 , w2 =   0.64
+neuron  1 : w0 =  -0.87 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.39 , w1 =  -0.89 , w2 =  -1.08
+==========
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.56 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.40 , w1 =  -0.88 , w2 =  -1.09
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3863
+x1 =  -1.0 , x2 =   1.0 y =  0.6503
+x1 =   1.0 , x2 =  -1.0 y =  0.6631
+x1 =   1.0 , x2 =   1.0 y =  0.5174
+Current weights: 
+neuron  0 : w0 =  -0.34 , w1 =   0.55 , w2 =   0.63
+neuron  1 : w0 =  -0.86 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.41 , w1 =  -0.88 , w2 =  -1.09
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.55 , w2 =   0.64
+neuron  1 : w0 =  -0.87 , w1 =  -0.96 , w2 =  -1.01
+neuron  2 : w0 =  -0.40 , w1 =  -0.88 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.55 , w2 =   0.63
+neuron  1 : w0 =  -0.87 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.39 , w1 =  -0.88 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.56 , w2 =   0.64
+neuron  1 : w0 =  -0.87 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.41 , w1 =  -0.89 , w2 =  -1.09
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3853
+x1 =  -1.0 , x2 =   1.0 y =  0.6516
+x1 =   1.0 , x2 =  -1.0 y =  0.6641
+x1 =   1.0 , x2 =   1.0 y =  0.5155
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.57 , w2 =   0.63
+neuron  1 : w0 =  -0.87 , w1 =  -0.95 , w2 =  -1.02
+neuron  2 : w0 =  -0.40 , w1 =  -0.89 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.56 , w2 =   0.64
+neuron  1 : w0 =  -0.88 , w1 =  -0.95 , w2 =  -1.01
+neuron  2 : w0 =  -0.39 , w1 =  -0.89 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.56 , w2 =   0.64
+neuron  1 : w0 =  -0.87 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.40 , w1 =  -0.89 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.57 , w2 =   0.64
+neuron  1 : w0 =  -0.87 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.41 , w1 =  -0.90 , w2 =  -1.10
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3842
+x1 =  -1.0 , x2 =   1.0 y =  0.6529
+x1 =   1.0 , x2 =  -1.0 y =  0.6650
+x1 =   1.0 , x2 =   1.0 y =  0.5136
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.57 , w2 =   0.65
+neuron  1 : w0 =  -0.87 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.43 , w1 =  -0.90 , w2 =  -1.08
+==========
+Current weights: 
+neuron  0 : w0 =  -0.35 , w1 =   0.57 , w2 =   0.65
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.01
+neuron  2 : w0 =  -0.42 , w1 =  -0.91 , w2 =  -1.09
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.57 , w2 =   0.65
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.01
+neuron  2 : w0 =  -0.41 , w1 =  -0.91 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.57 , w2 =   0.65
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.42 , w1 =  -0.90 , w2 =  -1.10
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3831
+x1 =  -1.0 , x2 =   1.0 y =  0.6545
+x1 =   1.0 , x2 =  -1.0 y =  0.6663
+x1 =   1.0 , x2 =   1.0 y =  0.5120
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.58 , w2 =   0.64
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.41 , w1 =  -0.90 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.58 , w2 =   0.64
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.03
+neuron  2 : w0 =  -0.42 , w1 =  -0.89 , w2 =  -1.12
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.58 , w2 =   0.64
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.03
+neuron  2 : w0 =  -0.44 , w1 =  -0.90 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.58 , w2 =   0.65
+neuron  1 : w0 =  -0.88 , w1 =  -0.97 , w2 =  -1.02
+neuron  2 : w0 =  -0.43 , w1 =  -0.91 , w2 =  -1.11
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3820
+x1 =  -1.0 , x2 =   1.0 y =  0.6559
+x1 =   1.0 , x2 =  -1.0 y =  0.6675
+x1 =   1.0 , x2 =   1.0 y =  0.5102
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.58 , w2 =   0.66
+neuron  1 : w0 =  -0.88 , w1 =  -0.96 , w2 =  -1.02
+neuron  2 : w0 =  -0.44 , w1 =  -0.92 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.58 , w2 =   0.66
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.02
+neuron  2 : w0 =  -0.43 , w1 =  -0.92 , w2 =  -1.10
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.58 , w2 =   0.65
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.02
+neuron  2 : w0 =  -0.42 , w1 =  -0.92 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.58 , w2 =   0.65
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.02
+neuron  2 : w0 =  -0.43 , w1 =  -0.91 , w2 =  -1.11
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3809
+x1 =  -1.0 , x2 =   1.0 y =  0.6575
+x1 =   1.0 , x2 =  -1.0 y =  0.6687
+x1 =   1.0 , x2 =   1.0 y =  0.5085
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.58 , w2 =   0.65
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.44 , w1 =  -0.90 , w2 =  -1.12
+==========
+Current weights: 
+neuron  0 : w0 =  -0.36 , w1 =   0.59 , w2 =   0.66
+neuron  1 : w0 =  -0.88 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.46 , w1 =  -0.91 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.58 , w2 =   0.66
+neuron  1 : w0 =  -0.89 , w1 =  -0.98 , w2 =  -1.02
+neuron  2 : w0 =  -0.45 , w1 =  -0.92 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.59 , w2 =   0.66
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.44 , w1 =  -0.92 , w2 =  -1.12
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3800
+x1 =  -1.0 , x2 =   1.0 y =  0.6592
+x1 =   1.0 , x2 =  -1.0 y =  0.6701
+x1 =   1.0 , x2 =   1.0 y =  0.5069
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.59 , w2 =   0.66
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.93 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.38 , w1 =   0.60 , w2 =   0.66
+neuron  1 : w0 =  -0.90 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.44 , w1 =  -0.93 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.60 , w2 =   0.66
+neuron  1 : w0 =  -0.89 , w1 =  -0.97 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.92 , w2 =  -1.12
+==========
+Current weights: 
+neuron  0 : w0 =  -0.38 , w1 =   0.59 , w2 =   0.66
+neuron  1 : w0 =  -0.90 , w1 =  -0.98 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.92 , w2 =  -1.12
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3789
+x1 =  -1.0 , x2 =   1.0 y =  0.6608
+x1 =   1.0 , x2 =  -1.0 y =  0.6714
+x1 =   1.0 , x2 =   1.0 y =  0.5052
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.60 , w2 =   0.67
+neuron  1 : w0 =  -0.90 , w1 =  -0.98 , w2 =  -1.03
+neuron  2 : w0 =  -0.46 , w1 =  -0.93 , w2 =  -1.11
+==========
+Current weights: 
+neuron  0 : w0 =  -0.37 , w1 =   0.60 , w2 =   0.67
+neuron  1 : w0 =  -0.89 , w1 =  -0.98 , w2 =  -1.03
+neuron  2 : w0 =  -0.47 , w1 =  -0.92 , w2 =  -1.12
+==========
+Current weights: 
+neuron  0 : w0 =  -0.38 , w1 =   0.61 , w2 =   0.66
+neuron  1 : w0 =  -0.90 , w1 =  -0.98 , w2 =  -1.04
+neuron  2 : w0 =  -0.46 , w1 =  -0.93 , w2 =  -1.13
+==========
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.60 , w2 =   0.66
+neuron  1 : w0 =  -0.90 , w1 =  -0.98 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.93 , w2 =  -1.13
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3780
+x1 =  -1.0 , x2 =   1.0 y =  0.6625
+x1 =   1.0 , x2 =  -1.0 y =  0.6728
+x1 =   1.0 , x2 =   1.0 y =  0.5035
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.61 , w2 =   0.66
+neuron  1 : w0 =  -0.91 , w1 =  -0.98 , w2 =  -1.04
+neuron  2 : w0 =  -0.45 , w1 =  -0.93 , w2 =  -1.14
+==========
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.61 , w2 =   0.66
+neuron  1 : w0 =  -0.91 , w1 =  -0.98 , w2 =  -1.04
+neuron  2 : w0 =  -0.46 , w1 =  -0.94 , w2 =  -1.12
+==========
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.61 , w2 =   0.67
+neuron  1 : w0 =  -0.91 , w1 =  -0.98 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.94 , w2 =  -1.13
+==========
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.61 , w2 =   0.67
+neuron  1 : w0 =  -0.91 , w1 =  -0.98 , w2 =  -1.04
+neuron  2 : w0 =  -0.46 , w1 =  -0.94 , w2 =  -1.14
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3768
+x1 =  -1.0 , x2 =   1.0 y =  0.6638
+x1 =   1.0 , x2 =  -1.0 y =  0.6739
+x1 =   1.0 , x2 =   1.0 y =  0.5016
+Current weights: 
+neuron  0 : w0 =  -0.40 , w1 =   0.60 , w2 =   0.67
+neuron  1 : w0 =  -0.91 , w1 =  -0.99 , w2 =  -1.03
+neuron  2 : w0 =  -0.45 , w1 =  -0.94 , w2 =  -1.14
+==========
+Current weights: 
+neuron  0 : w0 =  -0.40 , w1 =   0.61 , w2 =   0.67
+neuron  1 : w0 =  -0.92 , w1 =  -0.99 , w2 =  -1.04
+neuron  2 : w0 =  -0.45 , w1 =  -0.94 , w2 =  -1.15
+==========
+Current weights: 
+neuron  0 : w0 =  -0.40 , w1 =   0.61 , w2 =   0.67
+neuron  1 : w0 =  -0.92 , w1 =  -0.98 , w2 =  -1.04
+neuron  2 : w0 =  -0.46 , w1 =  -0.95 , w2 =  -1.13
+==========
+Current weights: 
+neuron  0 : w0 =  -0.39 , w1 =   0.61 , w2 =   0.67
+neuron  1 : w0 =  -0.91 , w1 =  -0.99 , w2 =  -1.04
+neuron  2 : w0 =  -0.47 , w1 =  -0.94 , w2 =  -1.14
+==========
+x1 =  -1.0 , x2 =  -1.0 y =  0.3756
+x1 =  -1.0 , x2 =   1.0 y =  0.6651
+x1 =   1.0 , x2 =  -1.0 y =  0.6749
+x1 =   1.0 , x2 =   1.0 y =  0.4995
+#+end_example

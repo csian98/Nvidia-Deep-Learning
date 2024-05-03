@@ -1,0 +1,317 @@
+#+TITLE: 14.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.19
+
+* Seq2Seq network & NLP
+** ANKI fra-eng dataset
+#+begin_src python
+
+import os
+import wget
+import gzip
+import zipfile
+import shutil
+
+url="http://www.manythings.org/anki/fra-eng.zip"
+output="../data/nmt"
+
+fname=wget.download(url, out=output)
+#fname="../data/nmt/fra-eng.zip"
+
+with zipfile.ZipFile(fname, 'r') as arch:
+    arch.extractall(output)
+
+os.remove(fname)
+
+#+end_src
+
+** Keras Functional API
+#+begin_src python :results output
+
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Concatenate
+
+inputs=Input(shape=(10, ))
+bypass_inputs=Input(shape=(5, ))
+
+layer1=Dense(64, activation="relu")
+concat_layer=Concatenate()
+layer2=Dense(64, activation="relu")
+
+layer1_outputs=layer1(inputs)
+layer2_inputs=concat_layer([layer1_outputs, bypass_inputs])
+layer2_outputs=layer2(layer2_inputs)
+
+model=Model(inputs=[inputs, bypass_inputs], outputs=layer2_outputs)
+model.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_1 (InputLayer)        [(None, 10)]                 0         []                            
+                                                                                                  
+ dense (Dense)               (None, 64)                   704       ['input_1[0][0]']             
+                                                                                                  
+ input_2 (InputLayer)        [(None, 5)]                  0         []                            
+                                                                                                  
+ concatenate (Concatenate)   (None, 69)                   0         ['dense[0][0]',               
+                                                                     'input_2[0][0]']             
+                                                                                                  
+ dense_1 (Dense)             (None, 64)                   4480      ['concatenate[0][0]']         
+                                                                                                  
+==================================================================================================
+Total params: 5184 (20.25 KB)
+Trainable params: 5184 (20.25 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
+#+end_example
+
+** Encoder-Decoder Architecture
+#+begin_src python :results output
+
+import numpy as np
+import random
+from tensorflow.keras.layers import Input, Embedding, LSTM, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.text import text_to_word_sequence
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import tensorflow as tf
+import logging
+import pickle
+
+tf.get_logger().setLevel(logging.ERROR)
+
+# Const
+EPOCHS=20
+BATCH_SIZE=128
+MAX_WORDS=10000
+READ_LINES=60000
+LAYER_SIZE=256
+EMBEDDING_WIDTH=128
+TEST_PERCENT=0.2
+SAMPLE_SIZE=20
+OOV_WORD="UNK"
+PAD_INDEX=0
+OOV_INDEX=1
+START_INDEX=MAX_WORDS-2
+STOP_INDEX=MAX_WORDS-1
+MAX_LENGTH=60
+SRC_DEST_FILE_NAME="../data/nmt/fra.txt"
+
+def read_file_combined(file_name, max_len):
+    file=open(file_name, 'r', encoding="utf-8")
+    src_word_sequences=[]
+    dst_word_sequences=[]
+    for i, line in enumerate(file):
+        if i==READ_LINES:
+            break
+        pair=line.split('\t')
+        word_sequence=text_to_word_sequence(pair[1])
+        src_word_sequence=word_sequence[0:max_len]
+        src_word_sequences.append(src_word_sequence)
+        word_sequence=text_to_word_sequence(pair[0])
+        dst_word_sequence=word_sequence[0:max_len]
+        dst_word_sequences.append(dst_word_sequence)
+    file.close()
+    return src_word_sequences, dst_word_sequences
+
+def tokenize(sequences):
+    tknz=Tokenizer(num_words=MAX_WORDS-2, oov_token=OOV_WORD)
+    tknz.fit_on_texts(sequences)
+    token_sequences=tknz.texts_to_sequences(sequences)
+    return tknz, token_sequences
+
+def tokens_to_words(tokenizer, seq):
+    word_seq=[]
+    for index in seq:
+        if index==PAD_INDEX:
+            word_seq.append("PAD")
+        elif index==OOV_INDEX:
+            word_seq.append(OOV_WORD)
+        elif index==START_INDEX:
+            word_seq.append("START")
+        elif index==STOP_INDEX:
+            word_seq.append("STOP")
+        else:
+            word_seq.append(tokenizer.sequences_to_texts([[index]])[0])
+    print(word_seq)
+
+### Model
+#
+# Encoder
+enc_embedding_input=Input(shape=(None, ))
+enc_embedding_layer=Embedding(
+    output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS, mask_zero=True
+)
+enc_layer1=LSTM(LAYER_SIZE, return_state=True,
+                return_sequences=True)
+enc_layer2=LSTM(LAYER_SIZE, return_state=True)
+enc_embedding_layer_outputs=enc_embedding_layer(enc_embedding_input)
+enc_layer1_outputs, enc_layer1_state_h, enc_layer1_state_c=enc_layer1(enc_embedding_layer_outputs)
+_, enc_layer2_state_h, enc_layer2_state_c=enc_layer2(enc_layer1_outputs)
+
+enc_model=Model(enc_embedding_input, [enc_layer1_state_h, enc_layer1_state_c,
+                                      enc_layer2_state_h, enc_layer2_state_c])
+
+# Decoder
+dec_layer1_state_input_h=Input(shape=(LAYER_SIZE, ))
+dec_layer1_state_input_c=Input(shape=(LAYER_SIZE, ))
+dec_layer2_state_input_h=Input(shape=(LAYER_SIZE, ))
+dec_layer2_state_input_c=Input(shape=(LAYER_SIZE, ))
+dec_embedding_input=Input(shape=(None, ))
+dec_embedding_layer=Embedding(
+    output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS, mask_zero=True
+)
+dec_layer1=LSTM(LAYER_SIZE, return_state=True,
+                return_sequences=True)
+dec_layer2=LSTM(LAYER_SIZE, return_state=True,
+                return_sequences=True)
+dec_layer3=Dense(MAX_WORDS, activation="softmax")
+
+dec_embedding_layer_outputs=dec_embedding_layer(dec_embedding_input)
+dec_layer1_outputs, dec_layer1_state_h, dec_layer1_state_c=dec_layer1(
+    dec_embedding_layer_outputs,
+    initial_state=[dec_layer1_state_input_h, dec_layer1_state_input_c]
+)
+dec_layer2_outputs, dec_layer2_state_h, dec_layer2_state_c=dec_layer2(
+    dec_layer1_outputs,
+    initial_state=[dec_layer2_state_input_h, dec_layer2_state_input_c]
+)
+dec_layer3_outputs=dec_layer3(dec_layer2_outputs)
+
+dec_model=Model([dec_embedding_input,
+                 dec_layer1_state_input_h,
+                 dec_layer1_state_input_c,
+                 dec_layer2_state_input_h,
+                 dec_layer2_state_input_c],
+                [dec_layer3_outputs,
+                 dec_layer1_state_h,
+                 dec_layer1_state_c,
+                 dec_layer2_state_h,
+                 dec_layer2_state_c])
+
+# Encoder - Decoder
+train_enc_embedding_input=Input(shape=(None, ))
+train_dec_embedding_input=Input(shape=(None, ))
+intermediate_state=enc_model(train_enc_embedding_input)
+train_dec_output, _, _, _, _=dec_model(
+    [train_dec_embedding_input]+intermediate_state
+)
+training_model=Model([train_enc_embedding_input, train_dec_embedding_input], train_dec_output)
+optimizer=RMSprop(lr=0.01)
+training_model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+training_model.summary()
+
+if __name__ == "__main__":
+    # Data Preparation
+    src_seq, dst_seq=read_file_combined(SRC_DEST_FILE_NAME, MAX_LENGTH)
+    src_tokenizer, src_token_seq=tokenize(src_seq)
+    dst_tokenizer, dst_token_seq=tokenize(dst_seq)
+
+    dst_target_token_seq=[x+[STOP_INDEX] for x in dst_token_seq]
+    dst_input_token_seq=[[START_INDEX]+x for x in dst_target_token_seq]
+
+    src_input_data=pad_sequences(src_token_seq)
+    dst_input_data=pad_sequences(dst_input_token_seq, padding="post")
+    dst_target_data=pad_sequences(dst_target_token_seq, padding="post", maxlen=len(dst_input_data[0]))
+
+    # Train, Test Datasets
+    rows=len(src_input_data[:, 0])
+    all_indices=list(range(rows))
+    test_rows=int(rows*TEST_PERCENT)
+    test_indices=random.sample(all_indices, test_rows)
+    train_indices=[x for x in all_indices if x not in test_indices]
+
+    train_src_input_data=src_input_data[train_indices]
+    train_dst_input_data=dst_input_data[train_indices]
+    train_dst_target_data=dst_target_data[train_indices]
+
+    test_src_input_data=src_input_data[test_indices]
+    test_dst_input_data=dst_input_data[test_indices]
+    test_dst_target_data=dst_target_data[test_indices]
+
+    test_indices=list(range(test_rows))
+    sample_indices=random.sample(test_indices, SAMPLE_SIZE)
+    sample_input_data=test_src_input_data[sample_indices]
+    sample_target_data=test_dst_target_data[sample_indices]
+
+    for i in range(EPOCHS):
+        print("step: ", i)
+        history=training_model.fit(
+            [train_src_input_data, train_dst_input_data],
+            train_dst_target_data, validation_data=(
+                [test_src_input_data, test_dst_input_data],
+                test_dst_target_data
+            ), batch_size=BATCH_SIZE, epochs=1
+        )
+
+        for (test_input, test_target) in zip(sample_input_data, sample_target_data):
+            x=np.reshape(test_input, (1, -1))
+            last_states=enc_model.predict(x, verbose=0)
+
+            prev_word_index=START_INDEX
+            produced_string=""
+            pred_seq=[]
+            for j in range(MAX_LENGTH):
+                x=np.reshape(np.array(prev_word_index), (1, 1))
+                preds, dec_layer1_state_h, dec_layer1_state_c, dec_layer2_state_h, dec_layer2_state_c= \
+                    dec_model.predict([x]+last_states, verbose=0)
+                last_states=[dec_layer1_state_h,
+                             dec_layer1_state_c,
+                             dec_layer2_state_h,
+                             dec_layer2_state_c]
+                prev_word_index=np.asarray(preds[0][0]).argmax()
+                pred_seq.append(prev_word_index)
+                if prev_word_index==STOP_INDEX:
+                    break
+                
+            tokens_to_words(src_tokenizer, test_input)
+            tokens_to_words(dst_tokenizer, test_target)
+            tokens_to_words(dst_tokenizer, pred_seq)
+            print("\n\n")
+
+    training_model.save_weights("../h5/nmt/weights.h5")
+    
+    with open("../h5/nmt/src_tokenizer.pkl", "wb") as fp:
+        pickle.dump(src_tokenizer, fp)
+
+    with open("../h5/nmt/dst_tokenizer.pkl", "wb") as fp:
+        pickle.dump(dst_tokenizer, fp)
+        
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "model_2"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_7 (InputLayer)        [(None, None)]               0         []                            
+                                                                                                  
+ input_8 (InputLayer)        [(None, None)]               0         []                            
+                                                                                                  
+ model (Functional)          [(None, 256),                2199552   ['input_7[0][0]']             
+                              (None, 256),                                                        
+                              (None, 256),                                                        
+                              (None, 256)]                                                        
+                                                                                                  
+ model_1 (Functional)        [(None, None, 10000),        4769552   ['input_8[0][0]',             
+                              (None, 256),                           'model[0][0]',               
+                              (None, 256),                           'model[0][1]',               
+                              (None, 256),                           'model[0][2]',               
+                              (None, 256)]                           'model[0][3]']               
+                                                                                                  
+==================================================================================================
+Total params: 6969104 (26.59 MB)
+Trainable params: 6969104 (26.59 MB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
+#+end_example

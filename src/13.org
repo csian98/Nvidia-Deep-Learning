@@ -1,0 +1,151 @@
+#+TITLE: 13.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.19
+
+* word2vec & GloVe
+** word2vec
+- Hierarchical softmax
+- CBoW, Continuous-Bag-of-Words
+- Continuous Skip Gram
+- Negative Sampling
+
+** GloVe
+#+begin_src python
+
+import os
+import wget
+import gzip
+import zipfile
+import shutil
+
+url="http://nlp.stanford.edu/data/glove.6B.zip"
+output="../data/embedded"
+
+fname=wget.download(url, out=output)
+#fname="../data/embedded/glove.6B.zip"
+
+with zipfile.ZipFile(fname, "r") as arch:
+    arch.extractall(output)
+
+os.remove(fname)
+
+#+end_src
+
+#+begin_src python :results output
+
+import numpy as np
+import scipy.spatial
+
+def read_embeddings():
+    FILE_NAME="../data/embedded/glove.6B.100d.txt"
+    embeddings={}
+    file=open(FILE_NAME, 'r', encoding="utf-8")
+    for line in file:
+        values=line.split()
+        word=values[0]
+        vector=np.asarray(values[1:], dtype="float32")
+        embeddings[word]=vector
+    file.close()
+    print("Read %s embeddings." %len(embeddings))
+    return embeddings
+
+def print_n_closest(embeddings, vec0, n):
+    word_distances={}
+    for (word, vec1) in embeddings.items():
+        distance=scipy.spatial.distance.cosine(
+            vec1, vec0
+        )
+        word_distances[distance]=word
+    for distance in sorted(word_distances.keys())[:n]:
+        word=word_distances[distance]
+        print(word+": %6.3f"%distance)
+
+if __name__ == "__main__":
+    embeddings=read_embeddings()
+    lookup_word="hello"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="precisely"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="dog"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="king"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="(king - man + woman)"
+    print("\nWords closest to "+lookup_word)
+    vec=embeddings["king"]-embeddings["man"]+embeddings["woman"]
+    print_n_closest(embeddings, vec, 3)
+
+    lookup_word="sweden"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="madrid"
+    print("\nWords closest to "+lookup_word)
+    print_n_closest(embeddings,
+                    embeddings[lookup_word], 3)
+
+    lookup_word="(madrid - spain + sweden)"
+    print("\nWords closest to "+lookup_word)
+    vec=embeddings["madrid"]-embeddings["spain"]+embeddings["sweden"]
+    print_n_closest(embeddings,
+                    vec, 3)
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Read 400000 embeddings.
+
+Words closest to hello
+hello:  0.000
+goodbye:  0.209
+hey:  0.283
+
+Words closest to precisely
+precisely:  0.000
+exactly:  0.147
+accurately:  0.293
+
+Words closest to dog
+dog:  0.000
+cat:  0.120
+dogs:  0.166
+
+Words closest to king
+king:  0.000
+prince:  0.232
+queen:  0.249
+
+Words closest to (king - man + woman)
+king:  0.145
+queen:  0.217
+monarch:  0.307
+
+Words closest to sweden
+sweden:  0.000
+denmark:  0.138
+norway:  0.193
+
+Words closest to madrid
+madrid:  0.000
+barcelona:  0.157
+valencia:  0.197
+
+Words closest to (madrid - spain + sweden)
+stockholm:  0.271
+sweden:  0.300
+copenhagen:  0.305
+#+end_example
