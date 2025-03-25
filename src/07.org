@@ -1,0 +1,161 @@
+#+TITLE: 07.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.08
+
+* CNN
+** CIFAR-10
+#+begin_src python
+
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+import matplotlib.pyplot as plt
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+cifar_dataset=keras.datasets.cifar10
+
+(train_images, train_labels), (test_images, test_labels)=cifar_dataset.load_data()
+
+print("Category: ", train_labels[100])
+plt.figure(figsize=(1, 1))
+plt.imshow(train_images[100])
+plt.show()
+
+#+end_src
+
+#+RESULTS:
+: None
+
+** Convolutional Neural Network
+Comparing weights number b/w Conv2D & Dense
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+model1=keras.models.Sequential()
+model1.add(keras.layers.Dense(32/2*32/2*64, activation="relu",
+                              input_shape=[32*32*3]))
+
+model1.summary()
+
+model2=keras.models.Sequential()
+model2.add(keras.layers.Conv2D(64, (3, 3), strides=(2, 2),
+                               activation="relu", padding="valid",
+                               input_shape=(32, 32, 3)))
+
+model2.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ dense (Dense)               (None, 16384)             50348032  
+                                                                 
+=================================================================
+Total params: 50348032 (192.06 MB)
+Trainable params: 50348032 (192.06 MB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+Model: "sequential_1"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv2d (Conv2D)             (None, 15, 15, 64)        1792      
+                                                                 
+=================================================================
+Total params: 1792 (7.00 KB)
+Trainable params: 1792 (7.00 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example
+
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Conv2D
+import numpy as np
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=128
+BATCH_SIZE=32
+
+cifar_dataset=keras.datasets.cifar10
+(train_images, train_labels), (test_images, test_labels)=cifar_dataset.load_data()
+
+mean=np.mean(train_images)
+stddev=np.std(train_images)
+
+train_images=(train_images-mean)/stddev
+test_images=(test_images-mean)/stddev
+
+print("mean: ", mean)
+print("stddev: ", stddev)
+
+train_labels=to_categorical(train_labels, num_classes=10)
+test_labels=to_categorical(test_labels, num_classes=10)
+
+model=Sequential()
+model.add(Conv2D(64, (5, 5), strides=(2, 2),
+                 activation="relu", padding="same",
+                 input_shape=(32, 32, 3),
+                 kernel_initializer="he_normal",
+                 bias_initializer="zeros"))
+model.add(Conv2D(64, (3, 3), strides=(2, 2),
+                 activation="relu", padding="same",
+                 kernel_initializer="he_normal",
+                 bias_initializer="zeros"))
+model.add(Flatten())
+model.add(Dense(10, activation="softmax",
+                kernel_initializer="glorot_uniform",
+                bias_initializer="zeros"))
+
+model.compile(loss="categorical_crossentropy", optimizer="adam",
+              metrics=["accuracy"])
+
+model.summary()
+
+history=model.fit(
+    train_images, train_labels, validation_data=(test_images, test_labels),
+    epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1, shuffle=True
+)
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+mean:  120.70756512369792
+stddev:  64.1500758911213
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv2d (Conv2D)             (None, 16, 16, 64)        4864      
+                                                                 
+ conv2d_1 (Conv2D)           (None, 8, 8, 64)          36928     
+                                                                 
+ flatten (Flatten)           (None, 4096)              0         
+                                                                 
+ dense (Dense)               (None, 10)                40970     
+                                                                 
+=================================================================
+Total params: 82762 (323.29 KB)
+Trainable params: 82762 (323.29 KB)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example

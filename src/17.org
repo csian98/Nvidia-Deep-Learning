@@ -1,0 +1,672 @@
+#+TITLE: 17.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.28
+
+* Auto-Encoder
+#+begin_src python
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
+import matplotlib.pyplot as plt
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=10
+
+mnist=keras.datasets.mnist
+(train_images, train_labels), (test_images, test_labels)=mnist.load_data()
+
+train_images=train_images/255.0
+test_images=test_images/255.0
+
+model=keras.Sequential([
+    keras.layers.Flatten(input_shape=(28, 28)),
+    keras.layers.Dense(64, activation="relu",
+                       kernel_initializer="glorot_normal",
+                       bias_initializer="zeros"),
+    keras.layers.Dense(784, activation="sigmoid",
+                       kernel_initializer="glorot_normal",
+                       bias_initializer="zeros"),
+    keras.layers.Reshape((28, 28))
+])
+
+model.compile(loss="binary_crossentropy", optimizer="adam",
+              metrics=["mean_absolute_error"])
+
+history=model.fit(train_images, train_images,
+                  validation_data=(test_images, test_images),
+                  epochs=EPOCHS, batch_size=64, verbose=0, shuffle=True)
+
+predict_images=model.predict(test_images)
+plt.subplot(1, 2, 1)
+plt.imshow(test_images[0], cmap=plt.get_cmap("gray"))
+plt.subplot(1, 2, 2)
+plt.imshow(predict_images[0], cmap=plt.get_cmap("gray"))
+plt.show()
+
+f_mnist=keras.datasets.fashion_mnist
+(f_train_images, f_train_labels), (f_test_images, f_test_labels)=f_mnist.load_data()
+f_train_images=f_train_images/255.0
+f_test_images=f_test_images/255.0
+
+f_predict_images=model.predict(f_test_images)
+plt.subplot(1, 2, 1)
+plt.imshow(f_test_images[0], cmap=plt.get_cmap("gray"))
+plt.subplot(1, 2, 2)
+plt.imshow(f_predict_images[0], cmap=plt.get_cmap("gray"))
+plt.show()
+
+error=np.mean(np.abs(test_images-predict_images), (1, 2))
+f_error=np.mean(np.abs(f_test_images-f_predict_images), (1, 2))
+_=plt.hist((error, f_error), bins=50, label=["mnist", "fashion mnist"])
+
+plt.legend()
+plt.xlabel("Absolute Mean Error")
+plt.ylabel("Examples")
+plt.title("Auto Encoder for Detecting Outlier")
+plt.show()
+
+index=error.argmax()
+plt.subplot(1, 2, 1)
+plt.imshow(test_images[index], cmap=plt.get_cmap("gray"))
+error[index]=0
+index=error.argmax()
+plt.subplot(1, 2, 2)
+plt.imshow(test_images[index], cmap=plt.get_cmap("gray"))
+plt.show()
+
+#+end_src
+
+#+RESULTS:
+: None
+
+* Multi-Modality
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.layers import Input, Embedding, LSTM, Flatten, Concatenate, Dense
+from tensorflow.keras.models import Model
+import numpy as np
+import matplotlib.pyplot as plt
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=20
+MAX_WORDS=8
+EMBEDDING_WIDTH=4
+
+mnist=keras.datasets.mnist
+(train_images, train_labels), (test_images, test_labels)=mnist.load_data()
+
+mean=np.mean(train_images)
+stddev=np.std(train_images)
+train_images=(train_images-mean)/stddev
+test_images=(test_images-mean)/stddev
+
+def create_text(tokenizer, labels):
+    text=[]
+    for i, label in enumerate(labels):
+        if i%2==0:
+            if label<5:
+                text.append("LOWER HALF")
+            else:
+                text.append("UPPER HALF")
+        else:
+            if label%2==0:
+                text.append("EVEN NUMBER")
+            else:
+                text.append("ODD NUMBER")
+    text=tokenizer.texts_to_sequences(text)
+    text=pad_sequences(text)
+    return text
+
+vocabulary=["LOWER", "UPPER", "HALF", "EVEN", "ODD", "NUMBER"]
+tokenizer=Tokenizer(num_words=MAX_WORDS)
+tokenizer.fit_on_texts(vocabulary)
+train_text=create_text(tokenizer, train_labels)
+test_text=create_text(tokenizer, test_labels)
+
+image_input=Input(shape=(28, 28))
+text_input=Input(shape=(2, ))
+
+embedding_layer=Embedding(output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS)
+lstm_layer=LSTM(8)
+flatten_layer=Flatten()
+concat_layer=Concatenate()
+dense_layer=Dense(25, activation="relu")
+output_layer=Dense(10, activation="softmax")
+
+embedding_output=embedding_layer(text_input)
+lstm_output=lstm_layer(embedding_output)
+flatten_output=flatten_layer(image_input)
+concat_output=concat_layer([lstm_output, flatten_output])
+dense_output=dense_layer(concat_output)
+outputs=output_layer(dense_output)
+
+model=Model([image_input, text_input], outputs)
+model.compile(loss="sparse_categorical_crossentropy",
+              optimizer="adam", metrics=["accuracy"])
+model.summary()
+
+history=model.fit([train_images, train_text], train_labels,
+                  validation_data=([test_images, test_text], test_labels),
+                  epochs=EPOCHS, batch_size=64, verbose=0, shuffle=True)
+
+print(test_labels[0])
+print(tokenizer.sequences_to_texts([test_text[0]]))
+plt.figure(figsize=(1, 1))
+plt.imshow(test_images[0], cmap=plt.get_cmap("gray"))
+plt.show()
+
+y=model.predict([test_images[0:1], np.array(tokenizer.texts_to_sequences(["UPPER HALF"]))])[0]
+print("Predictions with correct input: ")
+for i in range(len(y)):
+    index=y.argmax()
+    print("Digit: %d, " %index, "probability: %5.2e" %y[index])
+    y[index]=0
+
+print("\nPredictions with incorrect input: ")
+y=model.predict([test_images[0:1], np.array(tokenizer.texts_to_sequences(["LOWER HALF"]))])[0]
+for i in range(len(y)):
+    index=y.argmax()
+    print("Digit: %d, " %index, "probability: %5.2e" %y[index])
+    y[index]=0
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_2 (InputLayer)        [(None, 2)]                  0         []                            
+                                                                                                  
+ embedding (Embedding)       (None, 2, 4)                 32        ['input_2[0][0]']             
+                                                                                                  
+ input_1 (InputLayer)        [(None, 28, 28)]             0         []                            
+                                                                                                  
+ lstm (LSTM)                 (None, 8)                    416       ['embedding[0][0]']           
+                                                                                                  
+ flatten (Flatten)           (None, 784)                  0         ['input_1[0][0]']             
+                                                                                                  
+ concatenate (Concatenate)   (None, 792)                  0         ['lstm[0][0]',                
+                                                                     'flatten[0][0]']             
+                                                                                                  
+ dense (Dense)               (None, 25)                   19825     ['concatenate[0][0]']         
+                                                                                                  
+ dense_1 (Dense)             (None, 10)                   260       ['dense[0][0]']               
+                                                                                                  
+==================================================================================================
+Total params: 20533 (80.21 KB)
+Trainable params: 20533 (80.21 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
+7
+['upper half']
+1/1 [==============================] - ETA: 0s 1/1 [==============================] - 0s 260ms/step
+Predictions with correct input: 
+Digit: 7,  probability: 1.00e+00
+Digit: 9,  probability: 6.42e-07
+Digit: 8,  probability: 3.57e-10
+Digit: 3,  probability: 8.00e-11
+Digit: 5,  probability: 3.10e-13
+Digit: 6,  probability: 9.41e-16
+Digit: 0,  probability: 8.79e-16
+Digit: 2,  probability: 5.15e-18
+Digit: 4,  probability: 6.27e-20
+Digit: 1,  probability: 4.94e-21
+
+Predictions with incorrect input: 
+1/1 [==============================] - ETA: 0s 1/1 [==============================] - 0s 7ms/step
+Digit: 3,  probability: 4.52e-01
+Digit: 7,  probability: 4.38e-01
+Digit: 2,  probability: 6.64e-02
+Digit: 0,  probability: 4.38e-02
+Digit: 1,  probability: 5.81e-07
+Digit: 9,  probability: 4.86e-07
+Digit: 4,  probability: 4.47e-07
+Digit: 8,  probability: 2.08e-07
+Digit: 6,  probability: 2.03e-12
+Digit: 5,  probability: 3.17e-15
+#+end_example
+
+* Multi-Task Training
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.layers import Input, Embedding, LSTM, Flatten, Concatenate, Dense
+from tensorflow.keras.models import Model
+import numpy as np
+import logging
+
+tf.get_logger().setLevel(logging.ERROR)
+
+EPOCHS=20
+MAX_WORDS=8
+EMBEDDING_WIDTH=4
+
+mnist=keras.datasets.mnist
+(train_images, train_labels), (test_images, test_labels)=mnist.load_data()
+mean=np.mean(train_images)
+stddev=np.std(train_images)
+
+train_images=(train_images-mean)/stddev
+test_images=(test_images-mean)/stddev
+
+def create_question_answer(tokenizer, labels):
+    text=[]
+    answers=np.zeros(len(labels))
+    for i, label in enumerate(labels):
+        question_num=i%4
+        if question_num==0:
+            text.append("LOWER HALF")
+            if label<5:
+                answers[i]=1.0
+        elif question_num==1:
+            text.append("UPPER HALF")
+            if label>=5:
+                answers[i]=1.0
+        elif question_num==2:
+            text.append("EVEN NUMBER")
+            if label%2==0:
+                answers[i]=1.0
+        elif question_num==3:
+            text.append("ODD NUMBER")
+            if label%2==1:
+                answers[i]=1.0
+    text=tokenizer.texts_to_sequences(text)
+    text=pad_sequences(text)
+    return text, answers
+
+vocabulary=["LOWER", "UPPER", "HALF", "EVEN", "ODD", "NUMBER"]
+tokenizer=Tokenizer(num_words=MAX_WORDS)
+tokenizer.fit_on_texts(vocabulary)
+train_text, train_answers=create_question_answer(tokenizer, train_labels)
+test_text, test_answers=create_question_answer(tokenizer, test_labels)
+
+image_input=Input(shape=(28, 28))
+text_input=Input(shape=(2, ))
+
+embedding_layer=Embedding(output_dim=EMBEDDING_WIDTH, input_dim=MAX_WORDS)
+lstm_layer=LSTM(8)
+flatten_layer=Flatten()
+concat_layer=Concatenate()
+dense_layer=Dense(25, activation="relu")
+class_output_layer=Dense(10, activation="softmax")
+answer_output_layer=Dense(1, activation="sigmoid")
+
+embedding_output=embedding_layer(text_input)
+lstm_output=lstm_layer(embedding_output)
+flatten_output=flatten_layer(image_input)
+concat_output=concat_layer([lstm_output, flatten_output])
+dense_output=dense_layer(concat_output)
+class_outputs=class_output_layer(dense_output)
+answer_outputs=answer_output_layer(dense_output)
+
+model=Model([image_input, text_input], [class_outputs, answer_outputs])
+model.compile(loss=["sparse_categorical_crossentropy", "binary_crossentropy"], optimizer="adam",
+             metrics=["accuracy"], loss_weights=[0.5, 0.5])
+model.summary()
+
+history=model.fit([train_images, train_text],
+                  [train_labels, train_answers],
+                  validation_data=(
+                      [test_images, test_text],
+                      [test_labels, test_answers]
+                  ),
+                  epochs=EPOCHS, batch_size=64, verbose=0, shuffle=True)
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "model"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ input_2 (InputLayer)        [(None, 2)]                  0         []                            
+                                                                                                  
+ embedding (Embedding)       (None, 2, 4)                 32        ['input_2[0][0]']             
+                                                                                                  
+ input_1 (InputLayer)        [(None, 28, 28)]             0         []                            
+                                                                                                  
+ lstm (LSTM)                 (None, 8)                    416       ['embedding[0][0]']           
+                                                                                                  
+ flatten (Flatten)           (None, 784)                  0         ['input_1[0][0]']             
+                                                                                                  
+ concatenate (Concatenate)   (None, 792)                  0         ['lstm[0][0]',                
+                                                                     'flatten[0][0]']             
+                                                                                                  
+ dense (Dense)               (None, 25)                   19825     ['concatenate[0][0]']         
+                                                                                                  
+ dense_1 (Dense)             (None, 10)                   260       ['dense[0][0]']               
+                                                                                                  
+ dense_2 (Dense)             (None, 1)                    26        ['dense[0][0]']               
+                                                                                                  
+==================================================================================================
+Total params: 20559 (80.31 KB)
+Trainable params: 20559 (80.31 KB)
+Non-trainable params: 0 (0.00 Byte)
+__________________________________________________________________________________________________
+#+end_example
+
+* Neural Architecture Search, NAS
+#+begin_src python
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Lambda, Dense, Flatten, Conv2D, Dropout, MaxPooling2D
+import numpy as np
+import logging
+import copy
+
+tf.get_logger().setLevel(logging.ERROR)
+
+MAX_MODEL_SIZE=500000
+CANDIDATE_EVALUATIONS=500
+EVAL_EPOCHS=3
+FINAL_EPOCHS=20
+
+layer_types=["DENSE", "CONV2D", "MAXPOOL2D"]
+param_values=dict([
+    ("size", [16, 64, 256, 1024, 4096]),
+    ("activation", ["relu", "tanh", "elu"]),
+    ("kernel_size", [(1, 1), (2, 2), (3, 3), (4, 4)]),
+    ("stride", [(1, 1), (2, 2), (3, 3), (4, 4)]),
+    ("dropout", [0.0, 0.4, 0.7, 0.9])
+])
+layer_params=dict([
+    ("DENSE", ["size", "activation", "dropout"]),
+    ("CONV2D", ["size", "activation", "kernel_size", "stride", "dropout"]),
+    ("MAXPOOL2D", ["kernel_size", "stride", "dropout"])
+])
+
+cifar_dataset=keras.datasets.cifar10
+(train_images, train_labels), (test_images, test_labels)=cifar_dataset.load_data()
+
+mean=np.mean(train_images)
+stddev=np.std(train_images)
+train_images=(train_images-mean)/stddev
+test_images=(test_images-mean)/stddev
+
+train_labels=to_categorical(train_labels, num_classes=10)
+test_labels=to_categorical(test_labels, num_classes=10)
+
+def generate_random_layer(layer_type):
+    layer={}
+    layer["layer_type"]=layer_type
+    params=layer_params[layer_type]
+    for param in params:
+        values=param_values[param]
+        layer[param]=values[np.random.randint(0, len(values))]
+    return layer
+
+def generate_model_definition():
+    layer_count=np.random.randint(2, 9)
+    non_dense_count=np.random.randint(1, layer_count)
+    layers=[]
+    for i in range(layer_count):
+        if i < non_dense_count:
+            layer_type=layer_types[np.random.randint(1, 3)]
+            layer=generate_random_layer(layer_type)
+        else:
+            layer=generate_random_layer("DENSE")
+        layers.append(layer)
+    return layers
+
+def compute_weight_count(layers):
+    last_shape=(32, 32, 3)
+    total_weights=0
+    for layer in layers:
+        layer_type=layer["layer_type"]
+        if layer_type=="DENSE":
+            size=layer["size"]
+            wieghts=size*(np.prod(last_shape)+1)
+            last_shape=(layer["size"])
+        else:
+            stride=layer["stride"]
+            if layer_type=="CONV2D":
+                size=layer["size"]
+                kernel_size=layer["kernel_size"]
+                weights=size*((np.prod(kernel_size)*last_shape[2])+1)
+                last_shape=(np.ceil(last_shape[0]/stride[0]),
+                            np.ceil(last_shape[1]/stride[1]),
+                            size)
+            elif layer_type=="MAXPOOL2D":
+                weights=0
+                last_shape=(np.ceil(last_shape[0]/stride[0]),
+                            np.ceil(last_shape[1]/stride[1]),
+                            last_shape[2])
+        total_weights+=weights
+    total_weights+=((np.prod(last_shape)+1)*10)
+    return total_weights
+
+def add_layer(model, params, prior_type):
+    layer_type=params["layer_type"]
+    if layer_type=="DENSE":
+        if prior_type!="DENSE":
+            model.add(Flatten())
+        size=params["size"]
+        act=params["activation"]
+        model.add(Dense(size, activation=act))
+    elif layer_type=="CONV2D":
+        size=params["size"]
+        act=params["activation"]
+        kernel_size=params["kernel_size"]
+        stride=params["stride"]
+        model.add(Conv2D(size, kernel_size, activation=act,
+                         strides=stride, padding="same"))
+    elif layer_type=="MAXPOOL2D":
+        kernel_size=params["kernel_size"]
+        stride=params["stride"]
+        model.add(MaxPooling2D(pool_size=kernel_size,
+                               strides=stride, padding="same"))
+    dropout=params["dropout"]
+    if(dropout>0.0):
+        model.add(Dropout(dropout))
+
+def create_model(layers):
+    tf.keras.backend.clear_session()
+    model=Sequential()
+    model.add(Lambda(lambda x: x, input_shape=(32, 32, 3)))
+    prev_layer="LAMBDA"
+    for layer in layers:
+        add_layer(model, layer, prev_layer)
+        prev_layer=layer["layer_type"]
+    model.add(Dense(10, activation="softmax"))
+    model.compile(loss="categorical_crossentropy",
+                  optimizer="adam", metrics=["accuracy"])
+    return model
+
+def create_and_evaluate_model(model_definition):
+    weight_count=compute_weight_count(model_definition)
+    if weight_count>MAX_MODEL_SIZE:
+        return 0.0
+    model=create_model(model_definition)
+    histroy=model.fit(train_images, train_labels,
+                      validation_data=(test_images, test_labels),
+                      epochs=EVAL_EPOCHS, batch_size=64,
+                      verbose=0, shuffle=False)
+    acc=histroy.history["val_accuracy"][-1]
+    print("Size: ", weight_count)
+    print("Accuracy: %5.2f" %acc)
+    return acc
+
+np.random.seed(2024)
+val_accuracy=0.0
+for i in range(CANDIDATE_EVALUATIONS):
+    valid_model=False
+    while(valid_model==False):
+        model_definition=generate_model_definition()
+        acc=create_and_evaluate_model(model_definition)
+        if acc>0.0:
+            valid_model=True
+    if acc>val_accuracy:
+        best_model=model_definition
+        val_accuracy=acc
+    print("Random Search, best accuracy: %5.2f" %val_accuracy)
+
+#+end_src
+
+#+RESULTS:
+: None
+
+** Stochastic hill climbing Algorithm
+#+begin_src python
+
+def tweak_model(model_definition):
+    layer_num=np.random.randint(0, len(model_definition))
+    last_layer=len(model_definition)-1
+    for first_dense, layer in enumerate(model_definition):
+        if layer["layer_type"]=="DENSE":
+            break
+    if np.random.randint(0, 2)==1:
+        delta=1
+    else:
+        delta=-1
+    if np.random.randint(0, 2)==1:
+        if len(model_definition)<3:
+            delta=1
+        if delta==-1:
+            if layer_num==0 and first_dense==1:
+                layer_num+=1
+            if layer_num==first_dense and layer_num==last_layer:
+                layer_num-=1
+            del model_definition[layer_num]
+        else:
+            if layer_num<first_dense:
+                layer_type=layer_types[np.random.randint(1, 3)]
+            else:
+                layer_type="DENSE"
+            layer=generate_random_layer(layer_type)
+            model_definition.insert(layer_num, layer)
+    else:
+        layer=model_definition[layer_num]
+        layer_type=layer["layer_type"]
+        params=layer_params[layer_type]
+        param=params[np.random.randint(0, len(params))]
+        current_val=layer[param]
+        values=param_values[param]
+        index=values.index(current_val)
+        max_index=len(values)
+        new_val=values[(index+delta)%max_index]
+        layer[param]=new_val
+
+model_definition=best_model
+
+for i in range(CANDIDTATE_EVALUADTIONS):
+    valid_model=False
+    while(valid_model==False):
+        old_model_definition=copy.deepcopy(model_definition)
+        tweak_model(model_definition)
+        acc=create_and_evaluate_model(model_definition)
+        if acc>0.0:
+            valid_model=True
+        else:
+            model_definition=old_model_definition
+    if acc>val_accuracy:
+        best_model=copy.deepcopy(model_definition)
+        val_accuracy=acc
+    else:
+        model_definition=old_model_definition
+    print("Hill climbing, best accuracy: %5.2f" %val_accuracy)
+        
+#+end_src
+
+#+RESULTS:
+
+** Evolutionary Algorithm
+#+begin_src python
+
+POPULATION_SIZE=50
+
+def cross_over(parents):
+    bottoms=[[], []]
+    tops=[[], []]
+    for i, model in enumerate(parents):
+        for layer in model:
+            if layer["layer_type"]!="DENSE":
+                bottoms[i].append(copy.deepcopy(layer))
+            else:
+                tops[i].append(copy.ddepcopy(layer))
+    i=np.random.randint(0, 2)
+    if (i==1 and compute_weight_count(parents[0])+compute_weight_count(parents[1])<MAX_MODEL_SIZE):
+        i=np.random.randint(0, 2)
+        new_model=bottoms[i]+bottoms[(i+1)%2]
+        i=np.random.randint(0, 2)
+        new_model=new_model+tops[i]+tops[(i+1)%2]
+    else:
+        i=np.random.randint(0, 2)
+        new_model=bottoms[i]+tops[(i+1)%2]
+    return new_model
+
+np.random.seed(2024)
+population=[]
+
+for i in range(POPULATION_SIZE):
+    valid_model=False
+    while(valid_model==False):
+        model_definition=generate_model_definition()
+        acc=create_and_evaluate_model(model_definition)
+        if acc>0.0:
+            valid_model=True
+    population.append((acc, model_definition))
+
+generations=int(CANDIDATE_EVALUATIONS/POPULATION_SIZE)-1
+
+for i in range(generations):
+    print("Generation number: ", i)
+    for j in range(POPULATION_SIZE):
+        valid_model=False
+        while(valid_model==False):
+            rand=np.random.rand()
+            parents=random.sample(population[:POPULATION_SIZE], 2)
+            parents=[parents[0][1], parents[1][1]]
+            if rand<0.5:
+                child=copy.deepcopy(parents[0])
+                tweak_model(child)
+            elif rand<0.75:
+                child=cross_over(parents)
+            else:
+                child=cross_over(parents)
+                tweak_model(child)
+            acc=create_and_evaluate_model(child)
+            if acc>0.0:
+                valid_model=True
+        population.append((acc, child))
+    population.sort(key=lambda x:x[0])
+    print("Evolution, best accuracy: %5.2f" %population[-1][0])
+    top=np.int64(np.ceil(0.2*len(population)))
+    bottom=np.int64(np.ceil(0.3*len(population)))
+    top_individuals=population[-top:]
+    remaining=np.int64(len(population)/2)-len(top_individuals)
+
+population=random.sample(population[bottom:-top], remaining)+top_individuals
+
+best_model=population[-1][1]
+
+#+end_src
+
+* AutoKeras
+#+begin_src python
+
+from autokeras import StructuredDataClassifier
+search=StructuredDataClassifier(max_trials=20)
+search.fit(x=X_train, y=y_train)
+
+#+end_src

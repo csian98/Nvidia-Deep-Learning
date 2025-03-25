@@ -1,0 +1,21 @@
+#+TITLE: 00.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.08
+
+* Key summarize
+** Gradient Vanishing
+- W initialization
+- x standardization
+- batch normalization
+- loss functions (e.g. cross-entropy)
+- activation functions (e.g. ReLU)
+** Gradient Exploding
+- gradient clipping
+
+** Regularization techniques
+- Early stopping
+- Weight decay
+  - L1 (Lasso)
+  - L2 (Ridge)
+  - Elastic Net
+- Dropout

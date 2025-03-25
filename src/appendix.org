@@ -1,0 +1,32 @@
+#+TITLE: appendix.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.03.15
+
+* Image Segmentation
+- Object Segmentation
+  R-CNN
+  Fast-CNN
+  Faster-CNN
+- Semantic Segmentation
+  Deconvolutional neural networks
+  U-Net
+- Instance Segmentation
+  Mask R-CNN
+- Panoptic Segmentation
+
+* Word Embedded
+- word2vec
+- GloVe
+- wordpieces
+- FastText (Probabilistic FastText)
+- ELMo
+- doc2vec
+- sent2vec
+
+* GPT, BERT, RoBERTa
+- GPT (Transformer Decoder)
+- BERT (Transformer Encoder)
+- RoBERTa
+- Transformer-XL
+- ERNIE
+- XLNet

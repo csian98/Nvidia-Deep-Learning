@@ -1,0 +1,78 @@
+#+TITLE: 10.org
+#+AUTHOR: Jeong Hoon Choi
+#+DATE: 2024.02.14
+
+* LSTM (Long Short-Term Memory)
+- CEC, Constant Error Carousel
+| Methods                    | Relieve Vanishing Gradient | Relieve Gradient Exploding | Ref            |
+|----------------------------+----------------------------+----------------------------+----------------|
+| Glorot & He initialization | Yes                        | No                         | All Neuron     |
+| Batch Normalization        | Yes                        | No                         | Hiden Neuron   |
+| Unsaturated function(ReLU) | Yes                        | No                         | All Neuron     |
+| Gradient Clipping          | No                         | Yes                        | All Neuron     |
+| Constant Error Carousel    | Yes                        | Yes                        | RNN Only(LSTM) |
+| Skip Connection            | Yes                        | No                         | ResNet         |
+
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM
+
+model=Sequential()
+model.add(LSTM(5, input_shape=(None, 1),
+               activation="tanh",
+               recurrent_activation="sigmoid"))
+
+model.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ lstm (LSTM)                 (None, 5)                 140       
+                                                                 
+=================================================================
+Total params: 140 (560.00 Byte)
+Trainable params: 140 (560.00 Byte)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example
+
+
+* GRU (Gated Recurrent Unit)
+#+begin_src python :results output
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import GRU
+
+model=Sequential()
+model.add(GRU(5, input_shape=(None, 1),
+              activation="tanh",
+              recurrent_activation="sigmoid"))
+
+model.summary()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ gru (GRU)                   (None, 5)                 120       
+                                                                 
+=================================================================
+Total params: 120 (480.00 Byte)
+Trainable params: 120 (480.00 Byte)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+#+end_example
